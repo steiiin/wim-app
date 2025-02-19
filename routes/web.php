@@ -19,12 +19,16 @@ Route::get('/monitor-poll', [ MonitorController::class, 'poll' ])->name('monitor
 /* Admin-Endpoints */
 Route::middleware(IsAuthenticated::class)->group(function() {
 
-    Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
-    Route::get('/admin-heartbeat', [AdminController::class, 'heartbeat'])->name('admin.heartbeat');
+    Route::controller(AdminController::class)->group(function () {
+        Route::get('/admin', 'index');
+        Route::get('/admin-heartbeat', 'heartbeat');
+    });
 
-    Route::get('/login', [LoginController::class, 'index'])->name('login');
-    Route::post('/login', [LoginController::class, 'authenticate']);
-    Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
+    Route::controller(LoginController::class)->group(function () {
+        Route::get('/login', 'index')->name('login');
+        Route::post('/login', 'authenticate');
+        Route::get('/logout', 'logout');
+    });
 
     Route::post('/set-settings', [SettingsController::class, 'store']);
     Route::post('/set-module-trash', [TrashController::class, 'store']);
