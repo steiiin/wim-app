@@ -13,6 +13,7 @@
 import { ref, computed } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import ShortAlert from '@/Components/ShortAlert.vue'
+import { RuleHelper } from '@/Utils/RuleHelper'
 
 // #endregion
 
@@ -64,15 +65,6 @@ import ShortAlert from '@/Components/ShortAlert.vue'
   });
   const isFormValid = ref(false)
 
-  // validation rules
-  const emptyRule = v => !!v || 'Du musst einen Namen eintragen.'
-  const linkRule = v => {
-    if (!/^(https?:\/\/)([\w-]+(\.[\w-]+)+)([\w.,@?^=%&:/~+#-]*[\w@?^=%&/~+#-])?$/i.test(v)) {
-      return 'Du musst einen gültigen Link eingeben.'
-    }
-    return true
-  }
-
 // #endregion
 
 // #region Lifecycle
@@ -90,7 +82,7 @@ import ShortAlert from '@/Components/ShortAlert.vue'
       <v-card-subtitle>Einstellungen</v-card-subtitle>
       <v-card-text>
         <v-form :disabled="settingsForm.processing" v-model="isFormValid" @submit.prevent="save" validate-on="input">
-          <v-text-field v-model="settingsForm.calendar_link" :rules="[emptyRule, linkRule]"
+          <v-text-field v-model="settingsForm.calendar_link" :rules="[RuleHelper.link]"
             label="Kalenderlink" autofocus=""></v-text-field>
           <hint>
             Füge einen Link zu einem Online-Abfallkalender ein. <br/> z.B. von:

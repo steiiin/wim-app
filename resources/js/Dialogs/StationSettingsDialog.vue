@@ -14,6 +14,7 @@ import { ref, computed, onMounted } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import ShortAlert from '@/Components/ShortAlert.vue'
 import { CloneHelper } from '@/Utils/CloneHelper'
+import { RuleHelper } from '@/Utils/RuleHelper'
 
 // #endregion
 
@@ -90,7 +91,7 @@ import { CloneHelper } from '@/Utils/CloneHelper'
   })
 
   // validation rules
-  const stationNameRule = v => !!v || 'Du musst einen Namen eintragen.'
+  const stationNameRule = v => RuleHelper.empty(v)===true || 'Du musst einen Namen eintragen.'
   const stationLocationRule = v => {
     if (!v) {
       return 'Du musst Koordinaten eingeben.'

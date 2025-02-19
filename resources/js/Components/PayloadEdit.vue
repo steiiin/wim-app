@@ -20,6 +20,7 @@ import { getSunrise, getSunset } from 'sunrise-sunset-js';
 import StationSettingsDialog from '@/Dialogs/StationSettingsDialog.vue';
 import EditInfoDialog from '@/Dialogs/EditInfoDialog.vue';
 import { DateHelper } from '@/Utils/DateHelper';
+import { RuleHelper } from '@/Utils/RuleHelper';
 
 // #endregion
 // #region Props
@@ -45,7 +46,7 @@ const computedModel = computed({
 // #endregion
 // #region Validation
 
-const requiredRule = v => !!v || 'Du musst hier etwas eintragen.'
+const titleRule = v => RuleHelper.empty(v)===true || 'Du musst einen Titel angeben.'
 
 // #endregion
 
@@ -57,7 +58,7 @@ const requiredRule = v => !!v || 'Du musst hier etwas eintragen.'
       :counter="15" label="Besatzung" maxlength="15" hide-details
       style="max-width: 180px;" >
     </v-text-field>
-    <v-text-field v-model="computedModel.title" :rules="[requiredRule]"
+    <v-text-field v-model="computedModel.title" :rules="[titleRule]"
       :counter="60" label="Titel" maxlength="60" hide-details="auto" autofocus
       class="mb-2" :rounded="0">
     </v-text-field>
