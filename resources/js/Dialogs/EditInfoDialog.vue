@@ -176,32 +176,32 @@
                     </v-btn-toggle>
                   </v-toolbar>
                 </v-sheet>
-              <v-sheet v-if="!editForm.is_permanent" class="pt-2 pb-4 px-4">
-                <v-row no-gutters>
-                  <v-col :style="{ maxWidth: '180px' }" class="mb-3">
-                    <DateTimeEdit v-model="editForm.from" mode="date"
-                      title="Sichtbar ab:">
-                    </DateTimeEdit>
-                  </v-col>
-                  <v-col class="d-flex align-center mt-4" v-if="false">
-                    <v-checkbox  label="Sofort sichtbar"></v-checkbox>
-                  </v-col>
-                </v-row>
+                <v-sheet v-if="!editForm.is_permanent" class="pt-2 pb-4 px-4">
+                  <v-row no-gutters>
+                    <v-col :style="{ maxWidth: '180px' }" class="mb-3">
+                      <DateTimeEdit v-model="editForm.from" mode="date"
+                        title="Sichtbar ab:">
+                      </DateTimeEdit>
+                    </v-col>
+                    <v-col class="d-flex align-center mt-4" v-if="false">
+                      <v-checkbox  label="Sofort sichtbar"></v-checkbox>
+                    </v-col>
+                  </v-row>
 
-                <DateTimeEdit v-model="editForm.until" mode="date" admode="endofday"
-                  title="Verschwindet nach:">
-                </DateTimeEdit>
+                  <DateTimeEdit v-model="editForm.until" mode="date" admode="endofday"
+                    title="Verschwindet nach:">
+                  </DateTimeEdit>
 
-                <v-alert v-if="!!editForm.from && !!editForm.until && isUntilBeforeFrom"
-                  type="error" variant="tonal" class="my-2">
-                  Du möchtest die Meldung erst nach ihrem Verschwinden sichtbar machen. Überprüfe die Daten.
-                </v-alert>
-                <v-alert v-else-if="!!editForm.until && isUntilPassed"
-                  type="error" variant="tonal" class="my-2">
-                  Deine Meldung würde sofort entfernt werden.
-                </v-alert>
+                  <v-alert v-if="!!editForm.from && !!editForm.until && isUntilBeforeFrom"
+                    type="error" variant="tonal" class="my-2">
+                    Du möchtest die Meldung erst nach ihrem Verschwinden sichtbar machen. Überprüfe die Daten.
+                  </v-alert>
+                  <v-alert v-else-if="!!editForm.until && isUntilPassed"
+                    type="error" variant="tonal" class="my-2">
+                    Deine Meldung würde sofort entfernt werden.
+                  </v-alert>
 
-              </v-sheet>
+                </v-sheet>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
