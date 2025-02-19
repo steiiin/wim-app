@@ -13,8 +13,10 @@ use App\Http\Middleware\IsAuthenticated;
 use Illuminate\Support\Facades\Route;
 
 /* Monitor-Endpoints */
-Route::get('/monitor', [ MonitorController::class, 'index' ])->name('monitor.index');
-Route::get('/monitor-poll', [ MonitorController::class, 'poll' ])->name('monitor.poll');
+Route::controller(MonitorController::class)->group(function () {
+    Route::get('/monitor', 'index');
+    Route::get('/monitor-poll', 'poll');
+});
 
 /* Admin-Endpoints */
 Route::middleware(IsAuthenticated::class)->group(function() {
