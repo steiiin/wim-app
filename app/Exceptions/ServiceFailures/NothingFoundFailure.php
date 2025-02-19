@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Exceptions\ModuleTrashService;
+namespace App\Exceptions\ServiceFailures;
 
 use App\Exceptions\ServiceFailure;
 

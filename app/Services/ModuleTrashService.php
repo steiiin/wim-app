@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Exceptions\ModuleTrashService\LinkFailure;
-use App\Exceptions\ModuleTrashService\NothingFoundFailure;
+use App\Exceptions\ServiceFailures\FetchFailure;
+use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use Carbon\Carbon;
 use Carbon\Exceptions\InvalidFormatException;
 use GuzzleHttp\Client;
@@ -19,7 +19,7 @@ class ModuleTrashService
    *
    * @param string $url
    * @return array
-   * @throws LinkFailure
+   * @throws FetchFailure
    */
   public static function fetchEvents(string $url)
   {
@@ -76,15 +76,15 @@ class ModuleTrashService
     }
     catch (GuzzleException $ex)
     {
-      throw new LinkFailure();
+      throw new FetchFailure();
     }
     catch (ParseException $ex)
     {
-      throw new LinkFailure();
+      throw new FetchFailure();
     }
     catch (\Throwable $ex)
     {
-      throw new LinkFailure();
+      throw new FetchFailure();
     }
 
   }

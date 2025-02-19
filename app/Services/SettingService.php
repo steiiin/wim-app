@@ -59,6 +59,43 @@ class SettingService
 
   // ##########################################################################
 
+  const KEY_MODULE_SHAREPOINT_USER = "module_sharepoint_user";
+  public static function getModuleMaltesercloudUser(): string
+  {
+    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_USER, '');
+  }
+  public static function setModuleMaltesercloudUser(string $username)
+  {
+    self::saveSetting(self::KEY_MODULE_SHAREPOINT_USER, $username);
+  }
+
+  // ##########################################################################
+
+  const KEY_MODULE_SHAREPOINT_PASS = "module_sharepoint_pass";
+  public static function getModuleMaltesercloudPass(): string
+  {
+    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_PASS, '');
+  }
+  public static function setModuleMaltesercloudPass(string $password)
+  {
+    self::saveSetting(self::KEY_MODULE_SHAREPOINT_PASS, $password);
+  }
+
+  // ##########################################################################
+
+  const KEY_MODULE_SHAREPOINT_FETCHED = "module_sharepoint_fetched";
+  public static function getModuleMaltesercloudLastFetched(): Carbon|null
+  {
+    $date = self::loadSetting(self::KEY_MODULE_SHAREPOINT_FETCHED, null);
+    return empty($date) ? null : Carbon::parse($date)->setTimezone(config('app.timezone'));
+  }
+  public static function setModuleMaltesercloudLastFetched(Carbon $date)
+  {
+    self::saveSetting(self::KEY_MODULE_SHAREPOINT_FETCHED, $date);
+  }
+
+  // ##########################################################################
+
   private static function loadSetting(string $key, $default = null)
   {
     $setting = Setting::where('key', $key)->first();
