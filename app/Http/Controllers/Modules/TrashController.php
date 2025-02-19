@@ -50,34 +50,33 @@ class TrashController extends Controller
 
   public function update()
   {
-    Log::alert('ModuleTrash: error while fetching calendarevents.');
+
     $calendar_link = SettingService::getModuleTrashLink();
-    if (!$calendar_link || strlen(trim($calendar_link)) === 0) {
-      echo('[WARN] No trash calendar link stored. Cancel.');
+    if (!$calendar_link || strlen(trim($calendar_link)) === 0)
+    {
+      Log::debug('ModuleTrash: No trash calendar link stored. Canceled Update.');
       die();
     }
 
     try {
 
-      echo('[ .. ] fetching calendarevents ... <br>');
+      Log::debug('ModuleTrash: fetching calendarevents ...');
       $trashEvents = ModuleTrashService::fetchEvents($calendar_link);
 
-      echo('[ .. ] add WIM events ... <br>');
+      Log::debug('ModuleTrash: recreate auto-events in WIM ...');
       $this->updateEntries($trashEvents);
 
-      echo('[ OK ] finished. <br>');
+      Log::debug('ModuleTrash: finished.');
+
+      return response('fetch finished');
 
     } catch (LinkFailure) {
-
-      echo('[FAIL] error while fetching calendarevents. Cancel.');
       Log::alert('ModuleTrash: error while fetching calendarevents.');
-
     } catch (NothingFoundFailure) {
-
-      echo('[FAIL] no calendarevents found. Cancel.');
       Log::alert('ModuleTrash: no calendarevents found.');
-
     }
+
+    return response('fetch failed. See logs.');
 
   }
 
