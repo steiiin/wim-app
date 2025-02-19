@@ -45,6 +45,12 @@ ADMIN_PASSPHRASE=password
 - Monitor (*/monitor*)
 - Verwaltung (*/admin*)
 
+|Screenshots|
+|---|
+| ![screenshot-admin](https://github.com/steiiin/wim-app/blob/main/docs/wim-admin.png?raw=true) |
+| ![screenshot-monitor](https://github.com/steiiin/wim-app/blob/main/docs/wim-monitor.png?raw=true) |
+| ![screenshot-monitor-dark](https://github.com/steiiin/wim-app/blob/main/docs/wim-monitor-dark.png?raw=true) |
+
 **Einträge**
 - *Info:* Mitteilungen
 - *Event:* Termine, Ereignisse
