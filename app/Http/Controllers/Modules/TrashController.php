@@ -12,6 +12,7 @@ use App\Services\SettingService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class TrashController extends Controller
@@ -47,6 +48,41 @@ class TrashController extends Controller
 
   }
 
+  public function update()
+  {
+    Log::alert('ModuleTrash: error while fetching calendarevents.');
+    $calendar_link = SettingService::getModuleTrashLink();
+    if (!$calendar_link || strlen(trim($calendar_link)) === 0) {
+      echo('[WARN] No trash calendar link stored. Cancel.');
+      die();
+    }
+
+    try {
+
+      echo('[ .. ] fetching calendarevents ... <br>');
+      $trashEvents = ModuleTrashService::fetchEvents($calendar_link);
+
+      echo('[ .. ] add WIM events ... <br>');
+      $this->updateEntries($trashEvents);
+
+      echo('[ OK ] finished. <br>');
+
+    } catch (LinkFailure) {
+
+      echo('[FAIL] error while fetching calendarevents. Cancel.');
+      Log::alert('ModuleTrash: error while fetching calendarevents.');
+
+    } catch (NothingFoundFailure) {
+
+      echo('[FAIL] no calendarevents found. Cancel.');
+      Log::alert('ModuleTrash: no calendarevents found.');
+
+    }
+
+  }
+
+  // #####################################################################
+
   public static function getHealth(): array
   {
 
@@ -62,7 +98,11 @@ class TrashController extends Controller
 
   }
 
+  // #####################################################################
+
   public const AUTOTAG = 'trash';
+
+  // #####################################################################
 
   /**
    * Purge all tasks created by this module.
@@ -72,6 +112,8 @@ class TrashController extends Controller
   {
     Task::where('autotag', self::AUTOTAG)->delete();
   }
+
+  // #####################################################################
 
   /**
    * Fetches all events in the link, removes old auto-added events and create event entries for the new ones.
