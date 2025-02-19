@@ -18,9 +18,9 @@ class AdminController extends Controller
         return Inertia::render('Admin', [
             'station_name' => SettingService::getStationName(),
             'station_location' => SettingService::getStationLocation(),
-            'infos' => Info::all(),
-            'events' => Event::all(),
-            'tasks' => Task::all(),
+            'infos' => Info::admin()->get(),
+            'events' => Event::admin()->get(),
+            'tasks' => Task::admin()->get(),
             'recurrings' => Recurring::all(),
             'moduleTrash' => array_merge([ 'calendar_link' => SettingService::getModuleTrashLink() ], TrashController::getHealth()),
         ]);

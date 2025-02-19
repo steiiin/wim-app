@@ -41,6 +41,11 @@ class Task extends Model
 
   // #####################################################################
 
+  public function scopeAdmin($query)
+  {
+    return $query->whereNull('autotag');
+  }
+
   public function scopeActive($query)
   {
 
