@@ -18,6 +18,11 @@ use Illuminate\Validation\ValidationException;
 class TrashController extends Controller
 {
 
+  /**
+   * Stores trash module settings.
+   * @param \Illuminate\Http\Request $request
+   * @return \Illuminate\Http\Response
+   */
   public function store(Request $request)
   {
 
@@ -48,6 +53,10 @@ class TrashController extends Controller
 
   }
 
+  /**
+   * API: Updates the entries using the stored module settings.
+   * @return \Illuminate\Http\Response
+   */
   public function update()
   {
 
@@ -82,6 +91,10 @@ class TrashController extends Controller
 
   // #####################################################################
 
+  /**
+   * Collect module informations.
+   * @return array
+   */
   public static function getHealth(): array
   {
 
@@ -104,8 +117,7 @@ class TrashController extends Controller
   // #####################################################################
 
   /**
-   * Purge all tasks created by this module.
-   *
+   * Purges all tasks created by this module.
    */
   private function purge()
   {
@@ -116,7 +128,8 @@ class TrashController extends Controller
 
   /**
    * Fetches all events in the link, removes old auto-added events and create event entries for the new ones.
-   *
+   * @param array $trashEvents Raw events mapped by ModuleTrashService.
+   * @return void
    */
   private function updateEntries(array $trashEvents)
   {
