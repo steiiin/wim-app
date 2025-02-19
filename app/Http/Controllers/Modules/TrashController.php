@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Modules;
 
-use App\Exceptions\ModuleTrashService\LinkFailure;
-use App\Exceptions\ModuleTrashService\NothingFoundFailure;
+use App\Exceptions\ServiceFailures\FetchFailure;
+use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
 use App\Services\ModuleTrashService;
@@ -41,7 +41,7 @@ class TrashController extends Controller
       // update entries
       $this->updateEntries($trashEvents);
 
-    } catch (LinkFailure) {
+    } catch (FetchFailure) {
       throw ValidationException::withMessages([
         'Link' => 'Der angegebene Link enthielt keinen gültigen Kalender.'
       ]);
@@ -79,7 +79,7 @@ class TrashController extends Controller
 
       return response('fetch finished');
 
-    } catch (LinkFailure) {
+    } catch (FetchFailure) {
       Log::alert('ModuleTrash: error while fetching calendarevents.');
     } catch (NothingFoundFailure) {
       Log::alert('ModuleTrash: no calendarevents found.');
@@ -99,8 +99,8 @@ class TrashController extends Controller
   {
 
     $lastFetched = SettingService::getModuleTrashLastFetched();
-    $latestUpdated = Task::where('autotag', 'trash')->max('updated_at');
-    $latestDueto = Task::where('autotag', 'trash')->max('dueto');
+    $latestUpdated = Task::where('autotag', self::AUTOTAG)->max('updated_at');
+    $latestDueto = Task::where('autotag', self::AUTOTAG)->max('dueto');
 
     return [
       'last_fetched' => empty($lastFetched) ? null : $lastFetched->toDateTimeString(),
