@@ -23,7 +23,7 @@ class SettingService
   const KEY_STATION_LOCATION = "station_location";
   public static function getStationLocation(): Array
   {
-    $location = self::loadSetting(self::KEY_STATION_LOCATION, '{"lat":51.1630871,"long":13.4704939}');
+    $location = self::loadSetting(self::KEY_STATION_LOCATION, '{"lat":50.940408,"long":6.991183}');
     return json_decode($location, true);
   }
   public static function setStationLocation(float $lat, float $long)

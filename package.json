@@ -17,6 +17,7 @@
         "vue": "^3.4.0"
     },
     "dependencies": {
+        "leaflet": "^1.9.4",
         "sunrise-sunset-js": "^2.2.1",
         "vuetify": "^3.7.7"
     }

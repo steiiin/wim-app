@@ -9,12 +9,18 @@
 
 // #region Imports
 
-// Vue composables
-import { ref, computed, onMounted } from 'vue'
-import { router, useForm } from '@inertiajs/vue3'
-import ShortAlert from '@/Components/ShortAlert.vue'
-import { CloneHelper } from '@/Utils/CloneHelper'
-import { RuleHelper } from '@/Utils/RuleHelper'
+  // Vue composables
+  import { ref, computed, onMounted } from 'vue'
+  import { router, useForm } from '@inertiajs/vue3'
+  import ShortAlert from '@/Components/ShortAlert.vue'
+  import { CloneHelper } from '@/Utils/CloneHelper'
+  import { RuleHelper } from '@/Utils/RuleHelper'
+
+  // Leaflet
+  import 'leaflet/dist/leaflet.css'
+  import * as L from 'leaflet'
+import { nextTick } from 'vue'
+import { onBeforeUnmount } from 'vue'
 
 // #endregion
 
@@ -23,10 +29,14 @@ import { RuleHelper } from '@/Utils/RuleHelper'
   const modalVisible = ref(false)
   const modalResolve = ref(null)
 
-  const open = (props) => {
+  const open = async (props) => {
     settingsForm.station_name = props.station_name;
     settingsForm.station_location = CloneHelper.obj(props.station_location);
     modalVisible.value = true
+
+    await nextTick()
+    initMap()
+
     return new Promise((resolve) => {
       modalResolve.value = resolve;
     });
@@ -40,6 +50,7 @@ import { RuleHelper } from '@/Utils/RuleHelper'
       onSuccess: () => {
         modalResolve.value(true)
         modalVisible.value = false
+        killMap()
       },
       onError: (errors) => {
         dialogAlert.value.showMessage(JSON.stringify(errors))
@@ -51,6 +62,7 @@ import { RuleHelper } from '@/Utils/RuleHelper'
   const cancel = () => {
     modalResolve.value(false)
     modalVisible.value = false
+    killMap()
   }
 
 // #endregion
@@ -72,42 +84,54 @@ import { RuleHelper } from '@/Utils/RuleHelper'
   const isFormValid = ref(false)
 
   // conversion
-  const stationLocationString = computed({
-    get() {
-      const { lat, long } = settingsForm.station_location
-      return lat && long ? `${lat},${long}` : ''
-    },
-    set(value) {
-      const parts = value.split(',').map(part => part.trim())
-      if (parts.length === 2) {
-        settingsForm.station_location.lat = parts[0]
-        settingsForm.station_location.long = parts[1]
-      } else {
-        // If the input is invalid, clear the fields or handle as needed
-        settingsForm.station_location.lat = ''
-        settingsForm.station_location.long = ''
-      }
-    }
-  })
+  const stationLocationString = computed(() => `Lat: ${settingsForm.station_location.lat}, Long: ${settingsForm.station_location.long}`)
 
   // validation rules
   const stationNameRule = v => RuleHelper.empty(v)===true || 'Du musst einen Namen eintragen.'
-  const stationLocationRule = v => {
-    if (!v) {
-      return 'Du musst Koordinaten eingeben.'
+
+// #endregion
+// #region Map
+
+  const stationMap = ref(null)
+  const stationMarker = ref(null)
+
+  const initMap = () => {
+
+    stationMap.value = L.map('station_map')
+
+    if (settingsForm.station_location.lat != 50.940408 && settingsForm.station_location.long != 6.991183)
+    {
+      stationMap.value.setView([settingsForm.station_location.lat, settingsForm.station_location.long], 14);
     }
-    const regex = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/
-    if (!regex.test(v)) {
-      return 'Gib eine gültige Ortsangabe (xx.xxx, xx.xxx) an.'
+    else
+    {
+      stationMap.value.fitBounds([
+        [47.27011, 5.86633],  // Southwest Germany corner
+        [55.05864, 15.04193]  // Northeast Germany corner
+      ])
     }
-    const [lat, long] = v.split(',').map(Number)
-    if (lat < -90 || lat > 90) {
-      return 'Latitude muss zwischen -90 und 90 sein.'
-    }
-    if (long < -180 || long > 180) {
-      return 'Longitude muss zwischen -180 und 180 sein.'
-    }
-    return true
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(stationMap.value)
+    stationMap.value.on('click', selectNewLocation)
+
+    putMarker([settingsForm.station_location.lat, settingsForm.station_location.long])
+
+  }
+  const killMap = () => { stationMap.value.remove() }
+
+  const selectNewLocation = (e) => {
+    putMarker(e.latlng)
+    settingsForm.station_location.lat = e.latlng.lat.toFixed(6)
+    settingsForm.station_location.long = e.latlng.lng.toFixed(6)
+  }
+
+  const putMarker = (latlng) => {
+    if (stationMarker.value) { stationMarker.value.remove(); }
+    stationMarker.value = L.marker(latlng)
+    stationMarker.value.addTo(stationMap.value)
   }
 
 // #endregion
@@ -129,13 +153,8 @@ import { RuleHelper } from '@/Utils/RuleHelper'
         <v-form :disabled="settingsForm.processing" v-model="isFormValid" @submit.prevent="save" validate-on="input">
           <v-text-field v-model="settingsForm.station_name" :rules="[stationNameRule]" :counter="30"
             label="Name"></v-text-field>
-          <v-text-field class="my-2" v-model="stationLocationString" :rules="[stationLocationRule]"
-            label="Standort"></v-text-field>
-          <hint>
-            Rufe die Koordinaten unter <a href="https://www.gpskoordinaten.de/"
-              target="_blank">https://gpskoordinaten.de</a> ab <br>
-            und füge den Text unter 'Lat,Long' hier ein.
-          </hint>
+          <div id="station_map" style="height:50vh;"></div>
+          <div>{{ stationLocationString }}</div>
         </v-form>
         <ShortAlert ref="dialogAlert" />
       </v-card-text>
