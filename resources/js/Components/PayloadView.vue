@@ -97,7 +97,9 @@ const hasDescription = computed(() => !!props.payload?.description)
 </script>
 
 <template>
-  <article class="payload" :class="{ 'payload-no-pre': !showTypeIcon }">
+  <article class="payload" :class="{
+    'payload-no-pre': !showTypeIcon,
+    'payload-fade': hasBegun && hasRange }">
     <article-pre>
       <v-icon v-if="isInfo" icon="mdi-information" />
       <template v-else-if="isEvent">
@@ -220,4 +222,13 @@ article {
   grid-template-columns: 0 1fr;
   article-pre { opacity: 0; }
 }
+
+.payload-fade article-payload
+{
+  zoom: 0.8;
+  transform-origin: left;
+
+  & payload-meta { display: none; }
+}
+
 </style>
