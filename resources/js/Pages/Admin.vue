@@ -71,25 +71,94 @@
   const infoData = computed(() => props.infos.map(e => ({ ...e,
     from: e.from ? new Date(e.from) : null,
     until: e.until ? new Date(e.until) : null,
-  })))
+  })).sort((a, b) => {
+
+    // 1. is_permanent: true first
+    if (a.is_permanent !== b.is_permanent) {
+      return a.is_permanent ? -1 : 1;
+    }
+
+    // 2. Compare until dates (ascending).
+    //    If both have dates, subtract them.
+    //    If one is null, assume non-null dates come first.
+    if (a.until && b.until) {
+      const diff = a.until - b.until
+      if (diff !== 0) return diff;
+    } else if (a.until || b.until) {
+      return a.until ? -1 : 1;
+    }
+
+    // 3. Compare payload properties (using payload.ab).
+    return a.payload.ab.localeCompare(b.payload.ab)
+
+  }))
   const hasInfoData = computed(() => props.infos.length > 0)
 
   const eventData = computed(() => props.events.map(e => ({ ...e,
     start: e.start ? new Date(e.start) : null,
     until: e.until ? new Date(e.until) : null,
-  })))
+  })).sort((a, b) => {
+
+    // 1. Compare until dates (ascending).
+    const dateA = a.until || a.start
+    const dateB = b.until || b.start
+    const diff = dateA - dateB
+    if (diff !== 0) return diff;
+
+    // 2. Compare payload properties (using payload.ab).
+    return a.payload.ab.localeCompare(b.payload.ab)
+
+  }))
   const hasEventData = computed(() => props.events.length > 0)
 
   const taskData = computed(() => props.tasks.map(e => ({ ...e,
     dueto: e.dueto ? new Date(e.dueto) : null,
     from: e.from ? new Date(e.from) : null,
-  })))
+  })).sort((a, b) => {
+
+    // 1. Compare until dates (ascending).
+    const diff = a.dueto - b.dueto
+    if (diff !== 0) return diff;
+
+    // 2. Compare payload properties (using payload.ab).
+    return a.payload.ab.localeCompare(b.payload.ab)
+
+  }))
   const hasTaskData = computed(() => props.tasks.length > 0)
 
+  const recurringOrder = ["daily", "weekly", "monthly-day", "monthly-weekday"]
   const recurringData = computed(() => props.recurrings.map(e => ({ ...e,
     from: e.from ? new Date(e.from) : null,
     dueto: e.dueto ? new Date(e.dueto) : null,
-  })))
+  })).sort((a, b) => {
+
+    // 1. Sort by recurrence_type order
+    const typeA = recurringOrder.indexOf(a.recurrence_type);
+    const typeB = recurringOrder.indexOf(b.recurrence_type);
+    if (typeA !== typeB) return typeA - typeB;
+
+    // 2. For the same recurrence_type, apply type-specific sorting:
+    if (a.recurrence_type === "daily") {
+      // For "daily": sort by dueto
+      if (a.dueto.getTime() !== b.dueto.getTime()) return a.dueto - b.dueto;
+    } else if (a.recurrence_type === "weekly") {
+      // For "weekly": sort by weekday (number) then by dueto
+      if (a.weekday !== b.weekday) return a.weekday - b.weekday;
+      if (a.dueto.getTime() !== b.dueto.getTime()) return a.dueto - b.dueto;
+    } else if (a.recurrence_type === "monthly-day") {
+      // For "monthly-day": sort by nth_day then by dueto
+      if (a.nth_day !== b.nth_day) return a.nth_day - b.nth_day;
+      if (a.dueto.getTime() !== b.dueto.getTime()) return a.dueto - b.dueto;
+    } else if (a.recurrence_type === "monthly-weekday") {
+      // For "monthly-weekday": sort by weekday then by dueto
+      if (a.weekday !== b.weekday) return a.weekday - b.weekday;
+      if (a.dueto.getTime() !== b.dueto.getTime()) return a.dueto - b.dueto;
+    }
+
+    // 3. If still equal, sort by payload
+    return a.payload.ab.localeCompare(b.payload.ab);
+
+  }))
   const hasRecurringData = computed(() => props.recurrings.length > 0)
 
 // #endregion
@@ -102,7 +171,8 @@
 
   // Routes
   function logout() {
-    router.get('/logout')
+    debugger
+    // router.get('/logout')
   }
 
 // #endregion
@@ -394,7 +464,8 @@ const deleteDialog = ref(null)
                   </v-btn>
                 </v-toolbar>
                 <v-data-table :items="infoData" v-if="hasInfoData"
-                  :headers="infosHeaders" :hide-default-footer="true" :items-per-page="999">
+                  :headers="infosHeaders"
+                  :hide-default-footer="true" :items-per-page="999">
                   <template v-slot:item.payload="{ item }">
                     {{ item.payload.title }}
                   </template>
