@@ -88,7 +88,6 @@ class Event extends Model
   public function scopeImminent($query)
   {
 
-    $now = Carbon::now();
     $tomorrowStart = Carbon::tomorrow()->startOfDay();
     $tomorrowEnd = Carbon::tomorrow()->endOfDay();
 
@@ -106,6 +105,24 @@ class Event extends Model
     return $query->where('start', '>', $tomorrowEnd)
       ->orderByRaw("COALESCE(start, until) ASC")
       ->orderBy('payload', 'asc');
+
+  }
+
+  public function scopeOutdated($query)
+  {
+
+    $yesterdayEnd = Carbon::yesterday()->endOfDay();
+
+    return $query->where(function ($query) use ($yesterdayEnd) {
+        // Case 1: Event has both start and until.
+        $query->whereNotNull('until')
+          ->where('until', '<', $yesterdayEnd);
+      })
+      ->orWhere(function ($query) use ($yesterdayEnd) {
+        // Case 2: Event has only a start (until is null).
+        $query->whereNull('until')
+          ->where('start', '<', $yesterdayEnd);
+      });
 
   }
 

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Event;
+use App\Models\Info;
+use App\Models\Task;
 use App\Services\SettingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +43,22 @@ class SettingsController extends Controller
     });
 
     return back();
+
+  }
+
+  /**
+   * API: Called regularly to do background-jobs.
+   * @return \Illuminate\Http\Response
+   */
+  public function doJobs()
+  {
+
+    // purge all old elements
+    Info::outdated()->delete();
+    Event::outdated()->delete();
+    Task::outdated()->delete();
+
+    return $this->handleLog('DoJobs', 'Jobs executed.');
 
   }
 

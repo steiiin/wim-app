@@ -69,4 +69,14 @@ class Info extends Model
 
   }
 
+  public function scopeOutdated($query)
+  {
+
+    $yesterdayEnd = Carbon::yesterday()->endOfDay();
+
+    return $query->where('is_permanent', false)
+      ->where('until', '<', $yesterdayEnd);
+
+  }
+
 }

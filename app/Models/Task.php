@@ -71,4 +71,13 @@ class Task extends Model
 
   }
 
+  public function scopeOutdated($query)
+  {
+
+    $yesterdayEnd = Carbon::yesterday()->endOfDay();
+
+    return $query->where('dueto', '<', $yesterdayEnd);
+
+  }
+
 }
