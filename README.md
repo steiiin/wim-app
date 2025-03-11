@@ -60,11 +60,9 @@ ADMIN_PASSPHRASE=password
 **Automatische Module**
 - *Abfallkalender:* Parst ein Online-iCal-Abo nach Abholterminen und fügt Aufgaben hinzu.
 - *Sharepoint-Liste:* Synchronisiert einen Sharepointkalender mit der Terminagenda des WIM.
-- *NINA:* Blendet Bevölkerungswarnung des NINA-Portals im WIM ein.
 
 Die Aktualisierung der Module wird über API-Endpunkte ermöglicht. Dadurch kann z.B. über CronJobs regelmäßig abgerufen werden:
 ```
 curl 'http://localhost/api/module-trash'
 curl 'http://localhost/api/module-sharepoint'
-curl 'http://localhost/api/module-nina'
 ```

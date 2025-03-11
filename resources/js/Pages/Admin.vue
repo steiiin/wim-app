@@ -610,9 +610,6 @@ const deleteDialog = ref(null)
                 </v-card>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            <v-expansion-panel>
-              <v-expansion-panel-title>NINA</v-expansion-panel-title>
-            </v-expansion-panel>
           </v-expansion-panels>
         </v-card-text>
       </v-card>
