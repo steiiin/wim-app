@@ -143,16 +143,6 @@ class SharepointController extends Controller
   // #####################################################################
 
   /**
-   * Purges all tasks created by this module.
-   */
-  private function purge()
-  {
-    Event::where('autotag', self::AUTOTAG)->delete();
-  }
-
-  // #####################################################################
-
-  /**
    * Fetches all events in the link, removes old auto-added events and create event entries for the new ones.
    * @param array $trashEvents Raw events mapped by ModuleTrashService.
    * @return void
@@ -161,7 +151,7 @@ class SharepointController extends Controller
   {
 
     // remove old ones
-    $this->purge();
+    Event::where('autotag', self::AUTOTAG)->delete();
 
     // create new ones
     DB::transaction(function () use ($sharepointElements) {
