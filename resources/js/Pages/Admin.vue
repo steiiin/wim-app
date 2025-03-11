@@ -171,8 +171,7 @@
 
   // Routes
   function logout() {
-    debugger
-    // router.get('/logout')
+    router.get('/logout')
   }
 
 // #endregion
