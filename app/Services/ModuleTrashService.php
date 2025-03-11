@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use Carbon\Carbon;
-use Carbon\Exceptions\InvalidFormatException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Sabre\VObject\ParseException;
@@ -19,11 +18,14 @@ class ModuleTrashService
    *
    * @param string $url
    * @return array
+   *
    * @throws FetchFailure
+   *
    */
-  public static function fetchEvents(string $url)
+  public static function fetchElements(string $url)
   {
 
+    SettingService::setModuleTrashLastFetched(Carbon::now());
     $client = new Client();
 
     try
@@ -44,23 +46,13 @@ class ModuleTrashService
         try
         {
 
-          // set timing
-          $date = Carbon::parse($event->DTSTART);
+          $element = new ModuleTrashElement(
+            $event->SUMMARY,
+            Carbon::parse($event->DTSTART),
+          );
 
-          // set title
-          $dumpster = '';
-          if (stripos($event->SUMMARY, 'rest') !== false) { $dumpster = 'Restmüllbehälter (Schwarz)'; }
-          else if (stripos($event->SUMMARY, 'gelb') !== false) { $dumpster = 'Gelben Behälter'; }
-          else if (stripos($event->SUMMARY, 'pappe') !== false) { $dumpster = 'Papierbehälter (Blau)'; }
-          else if (stripos($event->SUMMARY, 'bio') !== false) { $dumpster = 'Biobehälter (Braun)'; }
-          else {
-            continue;
-          }
-
-          $foundEvents[] = [
-            'dumpster' => $dumpster,
-            'date' => $date,
-          ];
+          if (!$element) { continue; }
+          $foundEvents[] = $element;
 
         }
         catch (\Throwable)
@@ -76,16 +68,48 @@ class ModuleTrashService
     }
     catch (GuzzleException $ex)
     {
-      throw new FetchFailure();
+      throw new FetchFailure('Fehler beim Abruf des Online-Abfallkalenders.');
     }
     catch (ParseException $ex)
     {
-      throw new FetchFailure();
+      throw new FetchFailure('Fehler beim Auslesen der Abholtermine.');
     }
     catch (\Throwable $ex)
     {
-      throw new FetchFailure();
+      throw new FetchFailure($ex->getMessage());
     }
+
+  }
+
+}
+
+class ModuleTrashElement
+{
+
+  public readonly string $dumpsterName;
+  public readonly Carbon $pickupDate;
+
+  public function __construct(string $dumpsterName, Carbon $pickupDate)
+  {
+
+    $this->pickupDate = $pickupDate;
+    $this->dumpsterName = $dumpsterName;
+
+  }
+
+  public static function get(string $eventSummary, Carbon $eventDate): ?ModuleTrashElement
+  {
+
+    $dumpsterName = '';
+    if (stripos($eventSummary, 'rest') !== false) { $dumpsterName = 'Restmüllbehälter (Schwarz)'; }
+    else if (stripos($eventSummary, 'gelb') !== false) { $dumpsterName = 'Gelben Behälter'; }
+    else if (stripos($eventSummary, 'pappe') !== false) { $dumpsterName = 'Papierbehälter (Blau)'; }
+    else if (stripos($eventSummary, 'bio') !== false) { $dumpsterName = 'Biobehälter (Braun)'; }
+    else {
+      return null;
+    }
+
+    return new ModuleTrashElement($dumpsterName, $eventDate);
 
   }
 

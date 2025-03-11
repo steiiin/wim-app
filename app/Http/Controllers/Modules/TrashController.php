@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Modules;
 
+use App\Exceptions\ServiceFailure;
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use App\Http\Controllers\Controller;
 use App\Models\Task;
+use App\Services\ModuleTrashElement;
 use App\Services\ModuleTrashService;
 use App\Services\PayloadService;
 use App\Services\SettingService;
@@ -32,23 +34,17 @@ class TrashController extends Controller
 
     try {
 
-      // try to fetch
-      $trashEvents = ModuleTrashService::fetchEvents($data['calendar_link']);
+      // try to fetch & update
+      $trashElements = ModuleTrashService::fetchElements($data['calendar_link']);
+      $this->updateEntries($trashElements);
 
-      // store new link
+      // save new link
       SettingService::setModuleTrashLink($data['calendar_link']);
 
-      // update entries
-      $this->updateEntries($trashEvents);
-
-    } catch (FetchFailure) {
-      throw ValidationException::withMessages([
-        'Link' => 'Der angegebene Link enthielt keinen gültigen Kalender.'
-      ]);
-    } catch (NothingFoundFailure) {
-      throw ValidationException::withMessages([
-        'Kalender' => 'Es wurden keine Abfalltermine gefunden.'
-      ]);
+    }
+    catch (\Throwable $ex)
+    {
+      $this->handleModuleFailure(self::AUTOTAG, $ex, self::FAILURE_INERTIA);
     }
 
   }
@@ -63,29 +59,25 @@ class TrashController extends Controller
     $calendar_link = SettingService::getModuleTrashLink();
     if (!$calendar_link || strlen(trim($calendar_link)) === 0)
     {
-      Log::debug('ModuleTrash: No trash calendar link stored. Canceled Update.');
-      die();
+      return $this->handleLog(self::AUTOTAG, 'No trash calendar link stored. Canceled Update.');
     }
 
     try {
 
-      Log::debug('ModuleTrash: fetching calendarevents ...');
-      $trashEvents = ModuleTrashService::fetchEvents($calendar_link);
+      $this->handleLog(self::AUTOTAG, 'fetching calendarevents ...');
+      $trashElements = ModuleTrashService::fetchElements($calendar_link);
 
-      Log::debug('ModuleTrash: recreate auto-events in WIM ...');
-      $this->updateEntries($trashEvents);
+      $this->handleLog(self::AUTOTAG, 'recreate auto-events in WIM ...');
+      $this->updateEntries($trashElements);
 
-      Log::debug('ModuleTrash: finished.');
+      return $this->handleLog(self::AUTOTAG, 'fetch finished');
 
-      return response('fetch finished');
-
-    } catch (FetchFailure) {
-      Log::alert('ModuleTrash: error while fetching calendarevents.');
-    } catch (NothingFoundFailure) {
-      Log::alert('ModuleTrash: no calendarevents found.');
     }
-
-    return response('fetch failed. See logs.');
+    catch (\Throwable $ex)
+    {
+      $this->handleModuleFailure(self::AUTOTAG, $ex, self::FAILURE_LOG);
+      return response('fetch failed. See logs.');
+    }
 
   }
 
@@ -117,48 +109,37 @@ class TrashController extends Controller
   // #####################################################################
 
   /**
-   * Purges all tasks created by this module.
-   */
-  private function purge()
-  {
-    Task::where('autotag', self::AUTOTAG)->delete();
-  }
-
-  // #####################################################################
-
-  /**
    * Fetches all events in the link, removes old auto-added events and create event entries for the new ones.
-   * @param array $trashEvents Raw events mapped by ModuleTrashService.
+   * @param array $trashElements Raw events mapped by ModuleTrashService.
    * @return void
    */
-  private function updateEntries(array $trashEvents)
+  private function updateEntries(array $trashElements)
   {
 
     // remove old ones
-    $this->purge();
+    Task::where('autotag', self::AUTOTAG)->delete();
 
     // create new ones
-    DB::transaction(function () use ($trashEvents)
+    DB::transaction(function () use ($trashElements)
     {
 
-      foreach ($trashEvents as $trashEvent)
+      foreach ($trashElements as $trashElement)
       {
 
         $payload = [
-          'title' => $trashEvent['dumpster'] . ' an die Straße stellen',
+          'title' => $trashElement->dumpsterName . ' an die Straße stellen',
           'meta' => 'Abfallkalender'
         ];
         PayloadService::normalize($payload);
 
         Task::create([
           'payload' => $payload,
-          'from' => $trashEvent['date']->copy()->addHours(-9),
-          'dueto' => $trashEvent['date']->copy()->addHours(6),
+          'from' => $trashElement->pickupDate->copy()->addHours(-9),
+          'dueto' => $trashElement->pickupDate->copy()->addHours(6),
           'autotag' => self::AUTOTAG,
         ]);
 
       }
-      SettingService::setModuleTrashLastFetched(Carbon::now());
 
     });
 

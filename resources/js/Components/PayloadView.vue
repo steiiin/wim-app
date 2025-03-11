@@ -156,7 +156,7 @@ article {
 
       min-height: 1.5rem;
       align-items: center;
-      gap: 0.35rem;
+      gap: 1px 0.35rem;
 
       font-size: 1.1rem;
       text-transform: capitalize;
