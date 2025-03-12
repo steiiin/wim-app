@@ -357,7 +357,7 @@ class ModuleSharepointElement
     $category = $event['Category'] ?? null;
     $meta = $event['Location'] ?? null;
 
-    if (strpos($event['Title'], 'MDR') !== false && !$category && !$description)
+    if (strpos($title, 'MDR') !== false && !$description)
     {
       $title = str_replace('MDR', '', $title);
       $category = 'Monatsdesinfektion';
