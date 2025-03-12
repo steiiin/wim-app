@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class LoginController extends Controller
@@ -25,7 +26,11 @@ class LoginController extends Controller
             'passphrase.required' => 'Du musst eine Passphrase eingeben.',
         ]);
 
-        if ($request->input('passphrase') === env('ADMIN_PASSPHRASE')) {
+        $passphrase = $request->input('passphrase');
+        $env_passphrase = env('ADMIN_PASSPHRASE');
+        Log::debug('Login-Attempt: got:'.$passphrase.', env:'.$env_passphrase);
+
+        if ($passphrase === $env_passphrase) {
             $request->session()->put('authenticated', true);
             return redirect()->intended('/');
         }
