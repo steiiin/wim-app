@@ -23,22 +23,63 @@ In der Dokumentation von Laravel finden sich weitere Hinweise:
 
 https://laravel.com/docs/11.x/deployment#main-content
 
----
+----
 
-#### Datenbank
-Treiber ist SQLite. Die DB wird im Ordner 'database' beim ersten Start erstellt.
+#### Projekt vorbereiten
 
----
+- PHP & Composer
+```
+/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.4)"
+```
+
+- NodeJs, NPM
+```
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+```
+
+- Repo laden
+```
+cd /var/www/
+git clone https://github.com/steiiin/wim-app
+```
 
 #### Env-Datei
-Im Projektordner muss eine ".env"-Datei erstellt werden, die die Basiskonfiguration enthält.
+Im Projektordner muss eine ".env"-Datei erstellt werden, die die Basiskonfiguration enthält:
 
 ```
 APP_TIMEZONE=Europe/Berlin
 APP_URL=http://localhost
 APP_LOCALE=de
 ADMIN_PASSPHRASE=password
+#########################
+APP_NAME=WIM
+VITE_APP_NAME="${APP_NAME}"
 ```
+
+Danach muss im Projektordner durch Laravel der App-Schlüssel erstellt werden:
+```
+cd /var/www/wim-app/
+sudo chown www-data:www-data .env
+sudo -u www-data php artisan key:generate
+```
+
+#### Datenbank
+Vor dem ersten Start muss die Datenbank erstellt werden:
+```
+cd /var/www/wim-app/
+touch database/database.sqlite
+sudo chown www-data:www-data database/database.sqlite
+sudo -u www-data php artisan migrate:fresh
+```
+
+#### Projekt erstellen
+Zum Schluss müssen die Abhängigkeiten installiert und das Projekt erstellt werden:
+```
+cd /var/www/wim-app/
+composer install
+npm update
+```
+
 ## Features
 
 **Seiten**
@@ -61,8 +102,23 @@ ADMIN_PASSPHRASE=password
 - *Abfallkalender:* Parst ein Online-iCal-Abo nach Abholterminen und fügt Aufgaben hinzu.
 - *Sharepoint-Liste:* Synchronisiert einen Sharepointkalender mit der Terminagenda des WIM.
 
-Die Aktualisierung der Module wird über API-Endpunkte ermöglicht. Dadurch kann z.B. über CronJobs regelmäßig abgerufen werden:
+### CronJobs
+Um die Module automatisch abzurufen und Hintergrundaufgaben regelmäßig durchzuführen, sollten folgende CronJobs erstellt werden:
 ```
-curl 'http://localhost/api/module-trash'
-curl 'http://localhost/api/module-sharepoint'
+0 0   * * 1 curl -k "https://localhost/api/trash"
+0 */6 * * * curl -k "https://localhost/api/sharepoint"
+0 20  * * * curl -k "https://localhost/api/do-jobs"
+```
+
+### Zwischenspeicher löschen
+Nachdem Änderungen am Projekt durchgeführt wurden (z.B. env-Datei), muss der Zwischenspeicher gelöscht werden:
+```
+chown -R www-data:www-data /var/www/wim-app/
+sudo -u www-data php artisan config:clear 2>&1
+sudo -u www-data php artisan cache:clear 2>&1
+sudo -u www-data php artisan route:clear 2>&1
+sudo -u www-data php artisan view:clear 2>&1
+sudo -u www-data php artisan config:cache 2>&1
+sudo -u www-data php artisan route:cache 2>&1
+sudo -u www-data php artisan view:cache 2>&1
 ```
