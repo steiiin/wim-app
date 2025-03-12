@@ -2,6 +2,8 @@
 
 return [
 
+    'admin_passphrase' => env('ADMIN_PASSPHRASE', null),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults

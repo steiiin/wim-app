@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
@@ -27,7 +28,8 @@ class LoginController extends Controller
         ]);
 
         $passphrase = $request->input('passphrase');
-        $env_passphrase = env('ADMIN_PASSPHRASE');
+        $env_passphrase = Config::get('auth.admin_passphrase', null);
+        if (!$env_passphrase) { return back()->withErrors([ 'passphrase' => 'Keine Passphrase konfiguriert.']); }
         Log::debug('Login-Attempt: got:'.$passphrase.', env:'.$env_passphrase);
 
         if ($passphrase === $env_passphrase) {
