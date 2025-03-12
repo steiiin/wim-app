@@ -10,22 +10,15 @@
 // #region Imports
 
 // Vue composables
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
-import { Head, router, useForm } from '@inertiajs/vue3'
-
-// 3rd-party composables
-import { getSunrise, getSunset } from 'sunrise-sunset-js';
+import { computed } from 'vue'
 
 // Local components
-import StationSettingsDialog from '@/Dialogs/StationSettingsDialog.vue';
-import EditInfoDialog from '@/Dialogs/EditInfoDialog.vue';
-import { DateHelper } from '@/Utils/DateHelper';
-import { RuleHelper } from '@/Utils/RuleHelper';
+import { RuleHelper } from '@/Utils/RuleHelper'
 
 // #endregion
 // #region Props
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue'])
 
 const props = defineProps({
   modelValue: {
