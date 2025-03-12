@@ -63,14 +63,13 @@ const timingText = computed(() => {
     }
     else
     {
-      if (DateHelper.isNullOrPassed(start) && (!isAllDay && DateHelper.isSameDay(start, end)))
+      hasBegun.value = DateHelper.isNullOrPassed(start)
+      if (hasBegun.value && (!isAllDay && DateHelper.isSameDay(start, end)))
       {
-        hasBegun.value = true
         return `bis ${DateHelper.formatDateTime(end, is_allday)}`
       }
       else
       {
-        hasBegun.value = false
         return DateHelper.formatDateRange(start, end, is_allday)
       }
     }
