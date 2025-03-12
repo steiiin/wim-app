@@ -19,8 +19,11 @@
   // Leaflet
   import 'leaflet/dist/leaflet.css'
   import * as L from 'leaflet'
-import { nextTick } from 'vue'
-import { onBeforeUnmount } from 'vue'
+  import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
+  import markerIcon from 'leaflet/dist/images/marker-icon.png'
+  import markerShadow from 'leaflet/dist/images/marker-shadow.png'
+
+  import { nextTick } from 'vue'
 
 // #endregion
 
@@ -116,6 +119,13 @@ import { onBeforeUnmount } from 'vue'
         attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(stationMap.value)
     stationMap.value.on('click', selectNewLocation)
+
+    delete L.Icon.Default.prototype._getIconUrl
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: markerIcon2x,
+      iconUrl: markerIcon,
+      shadowUrl: markerShadow,
+    })
 
     putMarker([settingsForm.station_location.lat, settingsForm.station_location.long])
 
