@@ -161,7 +161,6 @@ article {
       gap: 1px 0.35rem;
 
       font-size: 1.1rem;
-      text-transform: capitalize;
       font-weight: 500;
       line-height: 1;
 
