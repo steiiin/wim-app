@@ -115,8 +115,7 @@ const hasDescription = computed(() => !!props.payload?.description)
       <payload-description v-if="hasDescription">{{ payload.description }}</payload-description>
       <payload-timing v-if="hasTimeIndication">
         <template v-if="!showTypeIcon || hasBegun">
-          <v-icon v-if="hasBegun && hasRange" icon="mdi-clock-end" />
-          <v-icon v-else icon="mdi-clock-outline" />
+          <v-icon icon="mdi-clock-outline" />
         </template>
         {{ timingText }}
       </payload-timing>
