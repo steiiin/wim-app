@@ -35,12 +35,20 @@ https://laravel.com/docs/11.x/deployment#main-content
 - NodeJs, NPM
 ```
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
+nvm install --lts
 ```
 
 - Repo laden
 ```
 cd /var/www/
 git clone https://github.com/steiiin/wim-app
+```
+
+#### Composer installieren
+PHP-Abhängigkeiten installieren
+```
+cd /var/www/wim-app/
+composer install
 ```
 
 #### Env-Datei
@@ -51,6 +59,7 @@ APP_TIMEZONE=Europe/Berlin
 APP_URL=http://localhost
 APP_LOCALE=de
 ADMIN_PASSPHRASE=password
+APP_KEY=
 #########################
 APP_NAME=WIM
 VITE_APP_NAME="${APP_NAME}"
