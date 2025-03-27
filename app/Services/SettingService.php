@@ -4,9 +4,23 @@ namespace App\Services;
 
 use App\Models\Setting;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 
 class SettingService
 {
+
+  const KEY_LASTUPDATED = 'settings_last_updated';
+
+  public static function getLastUpdated()
+  {
+    return Cache::get(self::KEY_LASTUPDATED, now()->subYears(20));
+  }
+  public static function setLastUpdated()
+  {
+    Cache::put(self::KEY_LASTUPDATED, now());
+  }
+
+  // ##########################################################################
 
   const KEY_STATION_NAME = "station_name";
   public static function getStationName(): string
@@ -16,6 +30,7 @@ class SettingService
   public static function setStationName(string $name)
   {
     self::saveSetting(self::KEY_STATION_NAME, $name);
+    self::setLastUpdated();
   }
 
   // ##########################################################################
@@ -30,6 +45,7 @@ class SettingService
   {
     $location = json_encode([ 'lat' => $lat, 'long' => $long ]);
     self::saveSetting(self::KEY_STATION_LOCATION, $location);
+    self::setLastUpdated();
   }
 
   // ##########################################################################
@@ -42,6 +58,7 @@ class SettingService
   public static function setMonitorZoom(float $zoom)
   {
     self::saveSetting(self::KEY_MONITOR_ZOOM, $zoom);
+    self::setLastUpdated();
   }
 
   // ##########################################################################

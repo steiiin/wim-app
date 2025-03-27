@@ -39,6 +39,8 @@ class MonitorController extends Controller
 
     $recurrings = Recurring::getActive();
 
+    $lastUpdated = SettingService::getLastUpdated()->timestamp;
+
     $end=hrtime(true);
     $eta=$end-$start;
 
@@ -52,6 +54,7 @@ class MonitorController extends Controller
       'tasks' => $tasks->map(fn($task) => $task->toMonitorArray()),
       'recurring' => $recurrings->map(fn($recurring) => $recurring->toMonitorArray()),
       'processed' => $eta/1e+6,
+      'lastupdated' => $lastUpdated,
     ]);
 
   }

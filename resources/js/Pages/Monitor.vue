@@ -87,8 +87,9 @@
   // #endregion
   // #region Content
 
-    const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [] })
+    const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [], lastUpdated: 0 })
     const hasOnceUpdated = ref(false)
+    const lastUpdated = ref(null)
 
     const hasTopics = computed(() => (contentData.value.infos.length + contentData.value.events.active.length + contentData.value.events.imminent.length) > 0)
     const hasTasks = computed(() => (contentData.value.tasks.length + contentData.value.recurring.length) > 0)
@@ -101,8 +102,15 @@
 
       axios.get('/monitor-poll')
         .then(response => {
+
           contentData.value = response.data
           hasOnceUpdated.value = true
+
+          if (!lastUpdated.value) { lastUpdated.value = Date.now() }
+          if ((contentData.value.lastupdated * 1000) >= lastUpdated.value) {
+            window.location.reload()
+          }
+
         })
         .catch(error => {
           issue.value = `Fehler: ${error}`
