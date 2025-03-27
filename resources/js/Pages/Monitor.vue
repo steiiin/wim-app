@@ -34,7 +34,11 @@
     station_location: {
       type: Object,
       required: true,
-    }
+    },
+    monitor_zoom: {
+      type: Number,
+      required: true,
+    },
   })
 
   // #region Header-Info
@@ -189,7 +193,7 @@
 
 <template>
   <Head title="Monitor" />
-  <main id="monitor">
+  <main id="monitor" :style="{ zoom: monitor_zoom }">
     <header>
       <name>{{ station_name }}</name>
       <info>

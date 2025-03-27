@@ -42,6 +42,10 @@
       type: Object,
       required: true,
     },
+    monitor_zoom: {
+      type: Number,
+      required: true,
+    },
     infos: {
       type: Array,
       required: true,
@@ -182,7 +186,8 @@
   const changeStationSettings = async () => {
     await stationSettingsDialog.value.open({
       station_name: props.station_name,
-      station_location: props.station_location
+      station_location: props.station_location,
+      monitor_zoom: props.monitor_zoom,
     })
   }
 
@@ -439,6 +444,7 @@ const deleteDialog = ref(null)
           <ul class="admin-info">
             <li><pre>Name:    </pre>{{ station_name }}</li>
             <li><pre>Standort:</pre>{{ `${station_location.lat}, ${station_location.long}` }}</li>
+            <li><pre>Zoom:    </pre>{{ (monitor_zoom*100).toFixed(0) }}%</li>
           </ul>
         </v-card-text>
         <v-divider></v-divider>

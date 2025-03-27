@@ -20,6 +20,7 @@ class SettingsController extends Controller
       'station_location' => 'sometimes|required|array:lat,long',
       'station_location.lat' => 'required|numeric|between:-90,90',
       'station_location.long' => 'required|numeric|between:-180,180',
+      'monitor_zoom' => 'sometimes|required|numeric|between:0.8,1.4',
     ]);
 
     DB::transaction(function () use ($data)
@@ -36,6 +37,10 @@ class SettingsController extends Controller
 
           case 'station_location':
             SettingService::setStationLocation($value['lat'], $value['long']);
+            break;
+
+          case 'monitor_zoom':
+            SettingService::setMonitorZoom($value);
             break;
 
         }

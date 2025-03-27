@@ -20,6 +20,7 @@ class MonitorController extends Controller
       'station_name' => SettingService::getStationName(),
       'station_time' => Carbon::now(),
       'station_location' => SettingService::getStationLocation(),
+      'monitor_zoom' => SettingService::getMonitorZoom(),
     ]);
   }
 

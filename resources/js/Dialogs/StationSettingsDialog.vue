@@ -35,6 +35,7 @@
   const open = async (props) => {
     settingsForm.station_name = props.station_name;
     settingsForm.station_location = CloneHelper.obj(props.station_location);
+    settingsForm.monitor_zoom = props.monitor_zoom;
     modalVisible.value = true
 
     await nextTick()
@@ -83,6 +84,7 @@
       lat: '',
       long: ''
     },
+    monitor_zoom: 1.0,
   });
   const isFormValid = ref(false)
 
@@ -163,6 +165,13 @@
         <v-form :disabled="settingsForm.processing" v-model="isFormValid" @submit.prevent="save" validate-on="input">
           <v-text-field v-model="settingsForm.station_name" :rules="[stationNameRule]" :counter="30"
             label="Name"></v-text-field>
+          <v-slider label="Monitor-Zoom"
+            v-model="settingsForm.monitor_zoom"
+            :max="1.4"
+            :min="0.8"
+            :step="0.1"
+            thumb-label
+          ></v-slider>
           <div id="station_map" style="height:50vh;"></div>
           <div>{{ stationLocationString }}</div>
         </v-form>

@@ -34,6 +34,18 @@ class SettingService
 
   // ##########################################################################
 
+  const KEY_MONITOR_ZOOM = "monitor_zoom";
+  public static function getMonitorZoom(): float
+  {
+    return (float)self::loadSetting(self::KEY_MONITOR_ZOOM, 1.0);
+  }
+  public static function setMonitorZoom(float $zoom)
+  {
+    self::saveSetting(self::KEY_MONITOR_ZOOM, $zoom);
+  }
+
+  // ##########################################################################
+
   const KEY_MODULE_TRASH_LINK = "module_trash_link";
   public static function getModuleTrashLink(): string
   {
