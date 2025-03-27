@@ -40,6 +40,10 @@ html, body, #app {
     height: 100% !important;
 }
 
+html.no-scrollbars {
+    overflow: hidden;
+}
+
 form
 {
 

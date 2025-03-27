@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 
 /* Monitor-Endpoints */
 Route::controller(MonitorController::class)->group(function () {
-    Route::get('/monitor', 'index');
+    Route::get('/monitor', 'index')->name('monitor');
     Route::get('/monitor-poll', 'poll');
 });
 
