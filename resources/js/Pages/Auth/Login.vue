@@ -10,11 +10,8 @@
 // #region Imports
 
   // Vue composables
-  import { ref, computed, nextTick, onMounted } from 'vue'
-  import { Head, router, useForm } from '@inertiajs/vue3'
-
-  // 3rd-party composables
-  import { getSunrise, getSunset } from 'sunrise-sunset-js';
+  import { ref } from 'vue'
+  import { Head, useForm } from '@inertiajs/vue3'
 
 // #endregion
 // #region Props
@@ -69,14 +66,18 @@
 
                 <error>{{ form.errors.passphrase }}</error>
 
-                <div class="d-flex justify-end" style="margin-top: 1rem">
+                <div class="d-flex justify-space-between" style="margin-top: 1rem">
+                    <v-btn prepend-icon="mdi-certificate-outline" :loading="form.processing"
+                        variant="tonal" href="/wim-ca.crt" download
+                    >Zertifikat</v-btn>
                     <v-btn type="submit" :loading="form.processing"
-                        variant="tonal"
+                        color="black"
                     >Anmelden</v-btn>
                 </div>
 
             </form>
         </v-card>
+
     </main>
 </template>
 <style lang="scss" scoped>

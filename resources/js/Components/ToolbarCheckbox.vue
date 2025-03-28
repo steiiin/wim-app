@@ -10,7 +10,7 @@
 // #region Imports
 
   // Vue composables
-  import { ref, computed, watch } from 'vue'
+  import { computed } from 'vue'
 
 // #endregion
 // #region Props
