@@ -169,7 +169,7 @@
 
     // start monitor clock
     const serverTimeOffset = Math.abs((new Date(props.station_time)).getTime() - Date.now());
-    if (serverTimeOffset >= 5000)
+    if (serverTimeOffset >= 2700000)
     {
       issue.value = `Die Server- & Monitorzeit weichen ${serverTimeOffset/1000}s voneinander ab!`
     }
