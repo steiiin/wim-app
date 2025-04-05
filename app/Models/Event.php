@@ -80,7 +80,7 @@ class Event extends Model
           ->where('is_allday', 1)
           ->whereBetween('start', [$todayStart, $todayEnd]);
       })
-      ->orderBy('until', 'asc')
+      ->orderBy('start', 'desc')
       ->orderBy('payload', 'asc');
 
   }

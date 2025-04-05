@@ -40,6 +40,7 @@ const hasTimeIndication = computed(() => (props.payload?.time_start || props.pay
 
 const hasBegun = ref(false)
 const hasRange = ref(false)
+const hasToFade = ref(false)
 
 const titleText = computed(() => !props.payload?.title ? 'Ohne Titel' : props.payload.title)
 const timingText = computed(() => {
@@ -50,6 +51,7 @@ const timingText = computed(() => {
   const isAllDay = is_allday ?? false
   const start = time_start ? new Date(time_start) : null
   const end = time_end ? new Date(time_end) : null
+  const todayBegin = new Date(); todayBegin.setHours(0, 0, 0, 0);
 
   if (props.payload.type === 'event')
   {
@@ -59,11 +61,13 @@ const timingText = computed(() => {
     if (!end)
     {
       hasBegun.value = DateHelper.isToday(start)
+      hasToFade.value = false
       return DateHelper.formatDateTime(start, isAllDay)
     }
     else
     {
       hasBegun.value = DateHelper.isNullOrPassed(start)
+      hasToFade.value = start < todayBegin
       if (hasBegun.value && (!isAllDay && DateHelper.isSameDay(start, end)))
       {
         return `bis ${DateHelper.formatDateTime(end, is_allday)}`
@@ -77,11 +81,13 @@ const timingText = computed(() => {
   else if (props.payload.type === 'task')
   {
     hasBegun.value = true
+    hasToFade.value = false
     return `Bis ${DateHelper.formatTime(end)}`
   }
   else
   {
     hasBegun.value = true
+    hasToFade.value = false
     return ''
   }
 
@@ -98,7 +104,7 @@ const hasDescription = computed(() => !!props.payload?.description)
 <template>
   <article class="payload" :class="{
     'payload-no-pre': !showTypeIcon,
-    'payload-fade': hasBegun && hasRange }">
+    'payload-fade': hasToFade }">
     <article-pre>
       <v-icon v-if="isInfo" icon="mdi-information" />
       <template v-else-if="isEvent">
