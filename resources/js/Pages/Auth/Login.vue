@@ -67,7 +67,7 @@
                 <error>{{ form.errors.passphrase }}</error>
 
                 <div class="d-flex justify-space-between" style="margin-top: 1rem">
-                    <v-btn prepend-icon="mdi-certificate-outline" :loading="form.processing"
+                    <v-btn prepend-icon="mdi-certificate-outline" :disabled="form.processing"
                         variant="tonal" href="/wim-ca.crt" download
                     >Zertifikat</v-btn>
                     <v-btn type="submit" :loading="form.processing"
