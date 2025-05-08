@@ -63,8 +63,7 @@ class Task extends Model
         // Case 2: Task has from.
         $query->whereNotNull('from')
           ->where('from', '<=', $now)
-          ->where('dueto', '>=', $now)
-          ->where('dueto', '<=', $todayEnd);
+          ->where('dueto', '>=', $now);
       })
       ->orderBy('dueto', 'asc')
       ->orderBy('payload', 'asc');
