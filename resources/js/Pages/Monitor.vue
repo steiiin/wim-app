@@ -44,8 +44,6 @@
   // #region Header-Info
 
     const monitorTime = ref(null);
-    const issue = ref('')
-    const hasIssue = computed(() => (issue?.value?.length ?? 0) > 0)
 
     const updateMonitorTime = () => {
       monitorTime.value = new Date(Date.now())
@@ -113,7 +111,7 @@
 
         })
         .catch(error => {
-          issue.value = `Fehler: ${error}`
+          console.error(error)
         })
         .finally(() => {
           handleOverflow()
@@ -130,7 +128,7 @@
       const todayStyle = computed(() => {
         if (todayScrollingMargin.value < 0) {
           const duration = Math.abs(todayScrollingMargin.value / 3)
-          return `animation: marquee ${duration}s linear infinite;`
+          return `animation: ${duration}s linear infinite marquee;`
         } else {
           return 'animation: none;'
         }
@@ -171,7 +169,7 @@
     const serverTimeOffset = Math.abs((new Date(props.station_time)).getTime() - Date.now());
     if (serverTimeOffset >= 2700000)
     {
-      issue.value = `Die Server- & Monitorzeit weichen ${serverTimeOffset/1000}s voneinander ab!`
+      console.error(`Die Server- & Monitorzeit weichen ${serverTimeOffset/1000}s voneinander ab!`)
     }
 
     setInterval(updateMonitorTime, 30000)
@@ -207,7 +205,6 @@
       <info>
         <clock>{{ infoClock }}</clock>
         <date>{{ infoDate }}</date>
-        <issues v-show="hasIssue">{{ issue }}</issues>
       </info>
     </header>
     <template v-if="hasOnceUpdated">
@@ -300,7 +297,6 @@ html, body, #app {
 
       clock { font-weight: 300; }
       date { font-size: 0.8rem; }
-      issues { color: red; font-size: 0.7rem; }
     }
   }
 
