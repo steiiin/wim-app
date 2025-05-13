@@ -146,7 +146,7 @@
         const afterHeightPx = afterStyles.getPropertyValue('height');
         const afterHeight = parseFloat(afterHeightPx);
 
-        todayScrollingMargin.value = today.clientHeight - (today.scrollHeight + afterHeight)
+        todayScrollingMargin.value = today.clientHeight - today.scrollHeight
         if (todayScrollingMargin.value == lastOverflowValue.value) { return }
         lastOverflowValue.value = todayScrollingMargin.value
 
@@ -155,7 +155,7 @@
           todayScrollingKeyframes.value.innerHTML = `
             @keyframes marquee {
               0%, 10%, 90%, 100% { transform: translateY(0); }
-              40%, 60% { transform: translateY(${todayScrollingMargin.value}px); }
+              40%, 60% { transform: translateY(${todayScrollingMargin.value - afterHeight}px); }
             }
           `
         }
