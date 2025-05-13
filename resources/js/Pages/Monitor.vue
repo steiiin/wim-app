@@ -87,7 +87,9 @@
 
     const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [], lastUpdated: 0 })
     const hasOnceUpdated = ref(false)
+
     const lastUpdated = ref(null)
+    const lastOverflowValue = ref(0)
 
     const hasTopics = computed(() => (contentData.value.infos.length + contentData.value.events.active.length + contentData.value.events.imminent.length) > 0)
     const hasTasks = computed(() => (contentData.value.tasks.length + contentData.value.recurring.length) > 0)
@@ -139,7 +141,15 @@
         const today = document.getElementById('today')
         if (!today || !todayScrollingKeyframes.value) { return }
 
-        todayScrollingMargin.value = today.clientHeight - today.scrollHeight
+        // ::after
+        const afterStyles  = getComputedStyle(today, '::after');
+        const afterHeightPx = afterStyles.getPropertyValue('height');
+        const afterHeight = parseFloat(afterHeightPx);
+
+        todayScrollingMargin.value = today.clientHeight - (today.scrollHeight + afterHeight)
+        if (todayScrollingMargin.value == lastOverflowValue.value) { return }
+        lastOverflowValue.value = todayScrollingMargin.value
+
         if (todayScrollingMargin.value < 0)
         {
           todayScrollingKeyframes.value.innerHTML = `
