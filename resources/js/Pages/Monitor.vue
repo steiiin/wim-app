@@ -18,6 +18,7 @@
   import MonitorEntry from '@/Components/MonitorEntry.vue';
   import axios from 'axios';
   import PayloadView from '@/Components/PayloadView.vue';
+import { watch } from 'vue';
 
 // #endregion
 // #region Props
@@ -139,14 +140,16 @@
       const handleOverflow = () => {
 
         const today = document.getElementById('today')
-        if (!today || !todayScrollingKeyframes.value) { return }
+        const todayScrollContainer = document.getElementById('todayScrollContainer')
+
+        if (!today || !todayScrollContainer || !todayScrollingKeyframes.value) { return }
 
         // ::after
         const afterStyles  = getComputedStyle(today, '::after');
         const afterHeightPx = afterStyles.getPropertyValue('height');
         const afterHeight = parseFloat(afterHeightPx);
 
-        todayScrollingMargin.value = today.clientHeight - today.scrollHeight
+        todayScrollingMargin.value = today.clientHeight - todayScrollContainer.scrollHeight
         if (todayScrollingMargin.value == lastOverflowValue.value) { return }
         lastOverflowValue.value = todayScrollingMargin.value
 
