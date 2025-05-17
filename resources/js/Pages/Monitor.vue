@@ -14,11 +14,10 @@
   import { Head } from '@inertiajs/vue3'
 
   // 3rd-party composables
-  import { getSunset } from 'sunrise-sunset-js';
+  import { getSunrise, getSunset } from 'sunrise-sunset-js';
   import MonitorEntry from '@/Components/MonitorEntry.vue';
   import axios from 'axios';
   import PayloadView from '@/Components/PayloadView.vue';
-import { watch } from 'vue';
 
 // #endregion
 // #region Props
@@ -53,7 +52,9 @@ import { watch } from 'vue';
       if (!monitorDOM) { return }
 
       const sunset = getSunset(props.station_location.lat, props.station_location.long);
-      if (monitorTime.value > sunset)
+      const sunrise = getSunrise(props.station_location.lat, props.station_location.long);
+
+      if (monitorTime.value > sunset || monitorTime.value < sunrise)
       {
         if (!monitorDOM.hasAttribute('night-mode'))
         {
