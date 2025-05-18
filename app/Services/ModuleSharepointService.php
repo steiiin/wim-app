@@ -6,16 +6,18 @@ use App\Exceptions\ServiceFailures\AuthFailure;
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use Carbon\Carbon;
+use OTPHP\TOTP;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\GuzzleException;
-use Illuminate\Validation\ValidationException;
+use OTPHP\Factory;
 
 class ModuleSharepointService
 {
 
   private static string $username;
   private static string $password;
+  private static TOTP $totp_sec;
   private static string $link_list;
   private static string $link_base;
 
@@ -26,6 +28,7 @@ class ModuleSharepointService
    *
    * @param string $username
    * @param string $password
+   * @param string $secret
    * @param string $link
    * @return array
    *
@@ -33,12 +36,12 @@ class ModuleSharepointService
    * @throws FetchFailure
    *
    */
-  public static function fetchEvents(string $username, string $password, string $link)
+  public static function fetchEvents(string $link, string $username, string $password, string $secret)
   {
 
     SettingService::setModuleSharepointLastFetched(Carbon::now());
 
-    self::init($username, $password, $link);
+    self::init($link, $username, $password, $secret);
     self::login();
 
     return self::loadListItems();
@@ -47,11 +50,12 @@ class ModuleSharepointService
 
   // #region reverse-engineered authentification
 
-    private static function init(string $username, string $password, string $link)
+    private static function init(string $link, string $username, string $password, string $totp_sec)
     {
 
       self::$username = $username;
       self::$password = $password;
+      self::$totp_sec = TOTP::create($totp_sec);
       self::$link_list = $link;
       self::$link_base = trim(parse_url($link, PHP_URL_SCHEME).'://'.parse_url($link, PHP_URL_HOST), '/');
 
@@ -75,6 +79,10 @@ class ModuleSharepointService
       try
       {
 
+        /********************************************************************************************
+         * 1: try unauthorized > get redirected
+         ********************************************************************************************/
+
         $response = self::$client->get(self::$link_base, [
           'headers' => [
             'Accept' => "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
@@ -84,70 +92,44 @@ class ModuleSharepointService
           ],
         ]);
 
+        // check successful
         if ($response->getStatusCode() !== 200) {
           throw new AuthFailure('Die Seite lehnte einen Aufruf ab.');
         }
 
+        // get last redirect url
         if (!$response->hasHeader('X-Guzzle-Redirect-History')) {
           throw new AuthFailure('Die Seite leitete nicht zum Sharepoint-Login weiter.');
         }
-
         $reponseHistory = $response->getHeader('X-Guzzle-Redirect-History');
         $authUrl = end($reponseHistory);
 
+        // check current url
         if (stripos($authUrl, 'login.microsoftonline.com') === false) {
           throw new AuthFailure('Die Seite nutzt keine Microsoft-Authentifizierung.');
         }
 
-        if (!$response->hasHeader('x-ms-request-id')) {
-          throw new AuthFailure('Keine MS-Request-ID gefunden.');
-        }
-
-        $msRequestId = $response->getHeader('x-ms-request-id')[0];
-        $oauthId = self::extractValue($authUrl, '.com/', '/');
-
-        if ($oauthId === false) {
-          throw new AuthFailure('Prop "oauthId" nicht gefunden.');
-        }
+        $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('x-ms-request-id', 1);
+        $oauthId = self::extractValue($authUrl, '.com/', '/') ?: self::throwAuthPro('oauthId', 1);
 
         $body = $response->getBody()->getContents();
-        $flowToken = self::extractValue($body, '"sFT":"', '"');
-        $orgRequest = self::extractValue($body, 'fctx%3d', '\u0026');
-        $hpgid = self::extractValue($body, '"hpgid":', ',');
-        $hpgact = self::extractValue($body, '"hpgact":', ',');
-        $paramsCanary = self::extractValue($body, '"apiCanary":"', '"');
-        $loginCanary = self::extractValue($body, '"canary":"', '"');
-        $clientId = self::extractValue($body, 'client-request-id=', '\u0026');
-        $state = self::extractValue($body, '"state":"', '"');
 
-        if ($flowToken === false) {
-          throw new AuthFailure('Prop "flowToken" nicht gefunden.');
-        }
-        if ($orgRequest === false) {
-          throw new AuthFailure('Prop "orgRequest" nicht gefunden.');
-        }
-        if ($hpgid === false) {
-          throw new AuthFailure('Prop "hpgid" nicht gefunden.');
-        }
-        if ($hpgact === false) {
-          throw new AuthFailure('Prop "hpgact" nicht gefunden.');
-        }
-        if ($paramsCanary === false) {
-          throw new AuthFailure('Prop "paramsCanary" nicht gefunden.');
-        }
-        if ($loginCanary === false) {
-          throw new AuthFailure('Prop "loginCanary" nicht gefunden.');
-        }
-        if ($clientId === false) {
-          throw new AuthFailure('Prop "clientId" nicht gefunden.');
-        }
-        if ($state === false) {
-          throw new AuthFailure('Prop "state" nicht gefunden.');
-        }
+        $flowToken = self::extractValue($body, '"sFT":"', '"') ?: self::throwAuthPro('sFT', 1);
+        $orgRequest = self::extractValue($body, 'fctx%3d', '\u0026') ?: self::throwAuthPro('fctx', 1);
+        $hpgid = self::extractValue($body, '"hpgid":', ',') ?: self::throwAuthPro('hpgid', 1);
+        $hpgact = self::extractValue($body, '"hpgact":', ',') ?: self::throwAuthPro('hpgact', 1);
+        $apiCanary = self::extractValue($body, '"apiCanary":"', '"') ?: self::throwAuthPro('apiCanary', 1);
+        $loginCanary = self::extractValue($body, '"canary":"', '"') ?: self::throwAuthPro('canary', 1);
+        $clientId = self::extractValue($body, 'client-request-id=', '\u0026') ?: self::throwAuthPro('clientId', 1);
+        $state = self::extractValue($body, '"state":"', '"') ?: self::throwAuthPro('state', 1);
+
+        /********************************************************************************************
+         * 2: get credential type
+         ********************************************************************************************/
 
         $paramsHeaders = [
           'Accept'            => 'application/json',
-          'canary'            => $paramsCanary,
+          'canary'            => $apiCanary,
           'client-request-id' => $clientId,
           'hpgact'            => $hpgact,
           'hpgid'             => $hpgid,
@@ -182,6 +164,10 @@ class ModuleSharepointService
           throw new AuthFailure('Die Seite lehnte den angegebenen Benutzernamen ab.');
         }
 
+        /********************************************************************************************
+         * 3: login with username/password
+         ********************************************************************************************/
+
         $authBody = [
           'i13'               => 0,
           'login'             => self::$username,
@@ -208,7 +194,122 @@ class ModuleSharepointService
         ]);
 
         if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Die Anmeldung ist fehlgeschlagen.');
+          throw new AuthFailure('Der Aufruf der MFA-Eingabe ist fehlgeschlagen.');
+        }
+
+        $body = $response->getBody()->getContents();
+
+        if (stripos($body, 'PhoneAppOTP') === false || stripos($body, 'iTotpOtcLength') === false) {
+          throw new AuthFailure('TOTP wird nicht unterstützt.');
+        }
+
+        $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('MsRequestId', 3);
+        $clientId = self::extractValue($body, 'client-request-id=', '\u0026') ?: self::throwAuthPro('clientId', 3);
+        $apiCanary = self::extractValue($body, '"apiCanary":"', '"') ?: self::throwAuthPro('apiCanary', 3);
+        $hpgid = self::extractValue($body, '"hpgid":', ',') ?: self::throwAuthPro('hpgid', 3);
+        $hpgact = self::extractValue($body, '"hpgact":', ',') ?: self::throwAuthPro('hpgact', 3);
+        $ctx = self::extractValue($body, '\u0026ctx=', '"') ?: self::throwAuthPro('ctx', 3);
+        $flowToken = self::extractValue($body, '"sFT":"', '"') ?: self::throwAuthPro('sFT', 3);
+
+        /********************************************************************************************
+         * 4: request MFA via TOTP
+         ********************************************************************************************/
+
+        $totpHeaders = [
+          'Accept'            => 'application/json',
+          'canary'            => $apiCanary,
+          'client-request-id' => $clientId,
+          'hpgact'            => $hpgact,
+          'hpgid'             => $hpgid,
+          'hprequestid'       => $msRequestId,
+        ];
+        $totpBody = [
+          'AuthMethodId'  => 'PhoneAppOTP',
+          'ctx'           => $ctx,
+          'flowToken'     => $flowToken,
+          'Method'        => 'BeginAuth',
+        ];
+
+        $response = self::$client->post('https://login.microsoftonline.com/common/SAS/BeginAuth', [
+          'headers' => $totpHeaders,
+          'json' => $totpBody,
+        ]);
+
+        if ($response->getStatusCode() !== 200) {
+          throw new AuthFailure('TOTP wurde als Methode abgelehnt.');
+        }
+
+        $body = $response->getBody()->getContents();
+
+        if (stripos($body, '"ResultValue":"Success"') === false) {
+          throw new AuthFailure('Fehler beim Abrufen der TOTP-Parameter.');
+        }
+
+        $ctx = self::extractValue($body, '"Ctx":"', '"') ?: self::throwAuthPro('Ctx', 4);
+        $flowToken = self::extractValue($body, '"FlowToken":"', '"') ?: self::throwAuthPro('FlowToken', 4);
+        $sessionId = self::extractValue($body, '"SessionId":"', '"') ?: self::throwAuthPro('SessionId', 4);
+        $totp = self::$totp_sec->now();
+
+        /********************************************************************************************
+         * 5: check TOTP is valid
+         ********************************************************************************************/
+
+        $totpBody = [
+          'AdditionalAuthData'  => $totp,
+          'AuthMethodId'        => 'PhoneAppOTP',
+          'Ctx'                 => $ctx,
+          'FlowToken'           => $flowToken,
+          'Method'              => 'EndAuth',
+          'PollCount'           => 1,
+          'SessionId'           => $sessionId,
+        ];
+
+        $response = self::$client->post('https://login.microsoftonline.com/common/SAS/EndAuth', [
+          'headers' => $totpHeaders,
+          'json' => $totpBody,
+        ]);
+
+        if ($response->getStatusCode() !== 200) {
+          throw new AuthFailure('TOTP wurde abgelehnt.');
+        }
+
+        $body = $response->getBody()->getContents();
+
+        if (stripos($body, '"ResultValue":"Success"') === false) {
+          throw new AuthFailure('Fehler beim Prüfen der TOTP-Parameter.');
+        }
+
+        $ctx = self::extractValue($body, '"Ctx":"', '"') ?: self::throwAuthPro('Ctx', 5);
+        $flowToken = self::extractValue($body, '"FlowToken":"', '"') ?: self::throwAuthPro('FlowToken', 5);
+        $sessionId = self::extractValue($body, '"SessionId":"', '"') ?: self::throwAuthPro('SessionId', 5);
+
+        /********************************************************************************************
+         * 6: process TOTP
+         ********************************************************************************************/
+
+        $processBody = [
+          'type' => 19,
+          'GeneralVerify' => false,
+          'request' => $ctx,
+          'mfaLastPollStart' => Carbon::now()->subSeconds(2)->timestamp,
+          'mfaLastPollEnd' => Carbon::now()->subSeconds(1)->timestamp,
+          'mfaAuthMethod' => 'PhoneAppOTP',
+          'otc' => $totp,
+          'login' => self::$username,
+          'flowToken' => $flowToken,
+          'hpgrequestid' => $msRequestId,
+          'sacxt' => '',
+          'hideSmsInMfaProofs' => false,
+          'canary' => $loginCanary,
+          'i19' => '10318',
+        ];
+
+        $response = self::$client->post('https://login.microsoftonline.com/common/SAS/ProcessAuth', [
+          'form_params' => $processBody,
+        ]);
+
+        if ($response->getStatusCode() !== 200) {
+          throw new AuthFailure('Dieser TOTP wurde abgelehnt.');
         }
 
         $body = $response->getBody()->getContents();
@@ -216,28 +317,16 @@ class ModuleSharepointService
         if (stripos($body, '/_forms/default.aspx') === false) {
           throw new AuthFailure('Die Weiterleitung nach der Anmeldung schlug fehl.');
         }
-        if (!$response->hasHeader('x-ms-request-id')) {
-          throw new AuthFailure('Kein Header "x-ms-request-id" gefunden.');
-        }
 
-        $msRequestId = $response->getHeader('x-ms-request-id');
-        $code = self::extractValue($body, 'name="code" value="', '"');
-        $idToken = self::extractValue($body, 'name="id_token" value="', '"');
-        $sessionState = self::extractValue($body, 'name="session_state" value="', '"');
-        $correlation = self::extractValue($body, 'name="correlation_id" value="', '"');
+        $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('MsRequestId', 6);
+        $code = self::extractValue($body, 'name="code" value="', '"') ?: self::throwAuthPro('code', 6);
+        $idToken = self::extractValue($body, 'name="id_token" value="', '"') ?: self::throwAuthPro('id_token', 6);
+        $sessionState = self::extractValue($body, 'name="session_state" value="', '"') ?: self::throwAuthPro('session_state', 6);
+        $correlation = self::extractValue($body, 'name="correlation_id" value="', '"') ?: self::throwAuthPro('correlation_id', 6);
 
-        if ($code === false) {
-          throw new AuthFailure('Prop "code" nicht gefunden.');
-        }
-        if ($idToken === false) {
-          throw new AuthFailure('Prop "idToken" nicht gefunden.');
-        }
-        if ($sessionState === false) {
-          throw new AuthFailure('Prop "sessionState" nicht gefunden.');
-        }
-        if ($correlation === false) {
-          throw new AuthFailure('Prop "correlation" nicht gefunden.');
-        }
+        /********************************************************************************************
+         * 7: open sharepoint
+         ********************************************************************************************/
 
         $accessBody = [
           'code'            => $code,
@@ -271,6 +360,11 @@ class ModuleSharepointService
         return substr($body, $needlePosition, $needleEnd - $needlePosition);
       }
       return false;
+    }
+
+    private static function throwAuthPro(string $prop, int $step)
+    {
+      throw new AuthFailure("Prop '$prop' in Schritt $step nicht gefunden");
     }
 
   // #endregion

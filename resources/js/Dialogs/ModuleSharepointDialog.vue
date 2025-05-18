@@ -27,6 +27,7 @@ import { RuleHelper } from '@/Utils/RuleHelper'
 
     settingsForm.username = CloneHelper.string(props.username)
     settingsForm.password = ''
+    settingsForm.secret = ''
     settingsForm.sharepoint_link = CloneHelper.string(props.sharepoint_link)
     settingsForm.branch = (!props.username && !props.sharepoint_link) ? 'all' : 'credentials'
 
@@ -71,6 +72,7 @@ import { RuleHelper } from '@/Utils/RuleHelper'
     branch: 'credentials',
     username: '',
     password: '',
+    secret: '',
     sharepoint_link: '',
   });
   const isCredentialsFormValid = ref(false)
@@ -95,6 +97,7 @@ import { RuleHelper } from '@/Utils/RuleHelper'
   // validation rules
   const userRule = v => RuleHelper.empty(v)===true || 'Du musst einen Benutzernamen eintragen.'
   const passRule = v => RuleHelper.empty(v)===true || 'Du musst ein Passwort eintragen.'
+  const secretRule = v => RuleHelper.empty(v)===true || 'Du musst ein TOTP-Secret eintragen.'
 
 // #endregion
 
@@ -129,6 +132,9 @@ import { RuleHelper } from '@/Utils/RuleHelper'
           </v-text-field>
           <v-text-field v-model="settingsForm.password" :rules="[passRule]" type="password"
             label="Passwort">
+          </v-text-field>
+          <v-text-field v-model="settingsForm.secret" :rules="[secretRule]"
+            label="TOTP-Secret">
           </v-text-field>
         </v-form>
         <v-form v-if="showLinkSheet"

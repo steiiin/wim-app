@@ -112,6 +112,18 @@ class SettingService
 
   // ##########################################################################
 
+  const KEY_MODULE_SHAREPOINT_SECRET = "module_sharepoint_secret";
+  public static function getModuleSharepointSecret(): string
+  {
+    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_SECRET, '');
+  }
+  public static function setModuleSharepointSecret(string $secret)
+  {
+    self::saveSetting(self::KEY_MODULE_SHAREPOINT_SECRET, $secret);
+  }
+
+  // ##########################################################################
+
   const KEY_MODULE_SHAREPOINT_LINK = "module_sharepoint_link";
   public static function getModuleSharepointLink(): string
   {

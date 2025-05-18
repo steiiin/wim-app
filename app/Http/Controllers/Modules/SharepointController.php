@@ -28,9 +28,10 @@ class SharepointController extends Controller
   {
 
     $data = $request->validate([
-      'branch'         => 'required|in:all,credentials,link',
-      'username'       => 'nullable|string|required_if:branch,all,credentials',
-      'password'       => 'nullable|string|required_if:branch,all,credentials',
+      'branch'          => 'required|in:all,credentials,link',
+      'username'        => 'nullable|string|required_if:branch,all,credentials',
+      'password'        => 'nullable|string|required_if:branch,all,credentials',
+      'secret'          => 'nullable|string|required_if:branch,all,credentials',
       'sharepoint_link' => 'nullable|url|required_if:branch,all,link',
     ]);
 
@@ -40,9 +41,10 @@ class SharepointController extends Controller
 
       // update with new data
       $sharepointElements = ModuleSharepointService::fetchEvents(
+        $data['sharepoint_link'] ?? SettingService::getModuleSharepointLink(),
         $data['username'] ?? SettingService::getModuleSharepointUser(),
         $data['password'] ?? SettingService::getModuleSharepointPass(),
-        $data['sharepoint_link'] ?? SettingService::getModuleSharepointLink()
+        $data['secret'] ?? SettingService::getModuleSharepointSecret(),
       );
       $this->updateEntries($sharepointElements);
 
@@ -62,6 +64,7 @@ class SharepointController extends Controller
         // store all settings
         SettingService::setModuleSharepointUser($data['username']);
         SettingService::setModuleSharepointPass($data['password']);
+        SettingService::setModuleSharepointSecret($data['secret']);
         SettingService::setModuleSharepointLink($data['sharepoint_link']);
 
       }
@@ -70,6 +73,7 @@ class SharepointController extends Controller
         // store new credentials
         SettingService::setModuleSharepointUser($data['username']);
         SettingService::setModuleSharepointPass($data['password']);
+        SettingService::setModuleSharepointSecret($data['secret']);
 
       }
       else if ($data['branch'] === 'link') {
@@ -91,17 +95,19 @@ class SharepointController extends Controller
 
     $username = SettingService::getModuleSharepointUser();
     $password = SettingService::getModuleSharepointPass();
+    $secret = SettingService::getModuleSharepointSecret();
     $link = SettingService::getModuleSharepointLink();
 
-    if (!$username || strlen(trim($username)) === 0 || !$password || strlen(trim($password)) === 0 || !$link || strlen(trim($link)) === 0) {
-      return $this->handleLog(self::AUTOTAG, 'No credentials/link stored. Canceled Update.');
-    }
+    // if (!$username || strlen(trim($username)) === 0 || !$password || strlen(trim($password)) === 0 || !$link || strlen(trim($link)) === 0 || !$secret || strlen(trim($secret)) === 0) {
+    //   return $this->handleLog(self::AUTOTAG, 'No credentials/link stored. Canceled Update.');
+    // }
+    // TODO: remove check
 
     try
     {
 
       $this->handleLog(self::AUTOTAG, 'fetching calendarevents');
-      $sharepointElements = ModuleSharepointService::fetchEvents($username, $password, $link);
+      $sharepointElements = ModuleSharepointService::fetchEvents($link, $username, $password, $secret);
 
       $this->handleLog(self::AUTOTAG, 'recreate auto-events in WIM');
       $this->updateEntries($sharepointElements);
