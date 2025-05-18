@@ -10,7 +10,6 @@ use OTPHP\TOTP;
 use GuzzleHttp\Client;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Exception\GuzzleException;
-use OTPHP\Factory;
 
 class ModuleSharepointService
 {
@@ -91,11 +90,7 @@ class ModuleSharepointService
             'track_redirects' => true,
           ],
         ]);
-
-        // check successful
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Die Seite lehnte einen Aufruf ab.');
-        }
+        self::throwNotOk($response, 'Sharepoint hat Zugriff abgelehnt');
 
         // get last redirect url
         if (!$response->hasHeader('X-Guzzle-Redirect-History')) {
@@ -105,9 +100,7 @@ class ModuleSharepointService
         $authUrl = end($reponseHistory);
 
         // check current url
-        if (stripos($authUrl, 'login.microsoftonline.com') === false) {
-          throw new AuthFailure('Die Seite nutzt keine Microsoft-Authentifizierung.');
-        }
+        self::throwIfMissing($authUrl, 'login.microsoftonline.com', 'Die Seite nutzt keine Microsoft-Authentifizierung');
 
         $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('x-ms-request-id', 1);
         $oauthId = self::extractValue($authUrl, '.com/', '/') ?: self::throwAuthPro('oauthId', 1);
@@ -159,10 +152,7 @@ class ModuleSharepointService
           'headers' => $paramsHeaders,
           'json' => $paramsBody,
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Die Seite lehnte den angegebenen Benutzernamen ab.');
-        }
+        self::throwNotOk($response, 'Benutzername abgelehnt');
 
         /********************************************************************************************
          * 3: login with username/password
@@ -192,16 +182,12 @@ class ModuleSharepointService
         $response = self::$client->post('https://login.microsoftonline.com/' . $oauthId . '/login', [
           'form_params' => $authBody,
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Der Aufruf der MFA-Eingabe ist fehlgeschlagen.');
-        }
+        self::throwNotOk($response, 'Anmeldedaten abgelehnt');
 
         $body = $response->getBody()->getContents();
 
-        if (stripos($body, 'PhoneAppOTP') === false || stripos($body, 'iTotpOtcLength') === false) {
-          throw new AuthFailure('TOTP wird nicht unterstützt.');
-        }
+        self::throwIfMissing($body, 'PhoneAppOTP', 'TOTP nicht unterstützt');
+        self::throwIfMissing($body, 'iTotpOtcLength', 'TOTP nicht unterstützt');
 
         $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('MsRequestId', 3);
         $clientId = self::extractValue($body, 'client-request-id=', '\u0026') ?: self::throwAuthPro('clientId', 3);
@@ -234,16 +220,11 @@ class ModuleSharepointService
           'headers' => $totpHeaders,
           'json' => $totpBody,
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('TOTP wurde als Methode abgelehnt.');
-        }
+        self::throwNotOk($response, 'TOTP nicht erlaubt bei diesem Benutzer');
 
         $body = $response->getBody()->getContents();
 
-        if (stripos($body, '"ResultValue":"Success"') === false) {
-          throw new AuthFailure('Fehler beim Abrufen der TOTP-Parameter.');
-        }
+        self::throwIfMissing($body, '"ResultValue":"Success"', 'Fehler beim Abrufen der TOTP-Parameter');
 
         $ctx = self::extractValue($body, '"Ctx":"', '"') ?: self::throwAuthPro('Ctx', 4);
         $flowToken = self::extractValue($body, '"FlowToken":"', '"') ?: self::throwAuthPro('FlowToken', 4);
@@ -268,16 +249,11 @@ class ModuleSharepointService
           'headers' => $totpHeaders,
           'json' => $totpBody,
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('TOTP wurde abgelehnt.');
-        }
+        self::throwNotOk($response, 'TOTP abgelehnt');
 
         $body = $response->getBody()->getContents();
 
-        if (stripos($body, '"ResultValue":"Success"') === false) {
-          throw new AuthFailure('Fehler beim Prüfen der TOTP-Parameter.');
-        }
+        self::throwIfMissing($body, '"ResultValue":"Success"', 'Fehler beim Abrufen der TOTP-Parameter');
 
         $ctx = self::extractValue($body, '"Ctx":"', '"') ?: self::throwAuthPro('Ctx', 5);
         $flowToken = self::extractValue($body, '"FlowToken":"', '"') ?: self::throwAuthPro('FlowToken', 5);
@@ -307,16 +283,11 @@ class ModuleSharepointService
         $response = self::$client->post('https://login.microsoftonline.com/common/SAS/ProcessAuth', [
           'form_params' => $processBody,
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Dieser TOTP wurde abgelehnt.');
-        }
+        self::throwNotOk($response, 'TOTP abgelehnt');
 
         $body = $response->getBody()->getContents();
 
-        if (stripos($body, '/_forms/default.aspx') === false) {
-          throw new AuthFailure('Die Weiterleitung nach der Anmeldung schlug fehl.');
-        }
+        self::throwIfMissing($body, '/_forms/default.aspx', 'Die Weiterleitung nach der Anmeldung schlug fehl.');
 
         $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('MsRequestId', 6);
         $code = self::extractValue($body, 'name="code" value="', '"') ?: self::throwAuthPro('code', 6);
@@ -338,10 +309,7 @@ class ModuleSharepointService
         $response = self::$client->post(self::$link_base . '/_forms/default.aspx', [
           'form_params' => $accessBody
         ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new AuthFailure('Die Anmeldung wurde abgelehnt.');
-        }
+        self::throwNotOk($response, 'Anmeldung abgelehnt');
 
       }
       catch (GuzzleException)
@@ -367,6 +335,20 @@ class ModuleSharepointService
       throw new AuthFailure("Prop '$prop' in Schritt $step nicht gefunden");
     }
 
+    private static function throwNotOk($response, string $reason = 'Status nicht 200')
+    {
+      if ($response->getStatusCode() !== 200) {
+        throw new AuthFailure($reason);
+      }
+    }
+
+    private static function throwIfMissing(string $body, string $contains, string $reason)
+    {
+      if (stripos($body, $contains) === false) {
+        throw new AuthFailure($reason);
+      }
+    }
+
   // #endregion
 
   // #region API-Calls
@@ -389,10 +371,7 @@ class ModuleSharepointService
       {
 
         $response = self::$client->get($apiUrl, [ 'headers' => $headers ]);
-
-        if ($response->getStatusCode() !== 200) {
-          throw new FetchFailure('Kalenderabruf wurde abgelehnt.');
-        }
+        self::throwNotOk($response, 'Kalenderabruf abgelehnt');
 
         $listBody = $response->getBody()->getContents();
         $listJson = json_decode($listBody, true);
