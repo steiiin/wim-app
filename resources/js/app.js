@@ -18,6 +18,16 @@ const vuetify = createVuetify({
   directives
 })
 
+// Error logging
+async function reportError(payload) {
+    await axios.post('/api/client-error', {
+        ...payload,
+        url:       window.location.href,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+    })
+}
+
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
@@ -27,11 +37,48 @@ createInertiaApp({
             import.meta.glob('./Pages/**/*.vue'),
         ),
     setup({ el, App, props, plugin }) {
-        return createApp({ render: () => h(App, props) })
+
+        const app = createApp({ render: () => h(App, props) })
             .use(plugin)
             .use(ZiggyVue)
             .use(vuetify)
-            .mount(el);
+
+        // errors: Vue render
+        app.config.errorHandler = (err, instance, info) => {
+            reportError({
+                message:   err.message,
+                stack:     err.stack,
+                info,
+                component: instance?.type?.name,
+            })
+        }
+
+        // errors: general
+        window.addEventListener("error", event => {
+            reportError({
+                message:   event.error?.message,
+                stack:     event.error?.stack,
+                info: 'general-error',
+                component: event.target?.location?.href ,
+            })
+        });
+
+        // errors: axios errors
+        axios.interceptors.response.use(
+            response => response,
+            error => {
+                reportError({
+                    message:   error.message,
+                    stack:     error.stack,
+                    info:      'axios-response',
+                    component: error.config?.url,
+                })
+                return Promise.reject(error)
+            }
+        )
+
+        return app.mount(el);
+
     },
     progress: {
         color: '#000000',
