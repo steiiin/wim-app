@@ -287,24 +287,21 @@ class ModuleSharepointService
 
         $body = $response->getBody()->getContents();
 
+
+
         self::throwIfMissing($body, '/_forms/default.aspx', 'Die Weiterleitung nach der Anmeldung schlug fehl.');
 
         $msRequestId = $response->getHeaderLine('x-ms-request-id') ?: self::throwAuthPro('MsRequestId', 6);
-        $code = self::extractValue($body, 'name="code" value="', '"') ?: self::throwAuthPro('code', 6);
-        $idToken = self::extractValue($body, 'name="id_token" value="', '"') ?: self::throwAuthPro('id_token', 6);
-        $sessionState = self::extractValue($body, 'name="session_state" value="', '"') ?: self::throwAuthPro('session_state', 6);
-        $correlation = self::extractValue($body, 'name="correlation_id" value="', '"') ?: self::throwAuthPro('correlation_id', 6);
+        $earJwe = self::extractValue($body, 'name="ear_jwe" value="', '"') ?: self::throwAuthPro('ear_jwe', 6);
+	$state = self::extractValue($body, 'name="state" value="', '"') ?: self::throwAuthPro('state', 6);
 
         /********************************************************************************************
          * 7: open sharepoint
          ********************************************************************************************/
 
         $accessBody = [
-          'code'            => $code,
-          'id_token'        => $idToken,
-          'state'           => $state,
-          'session_state'   => $sessionState,
-          'correlation_id'  => $correlation,
+          'ear_jwe'	=> $earJwe,
+	  'state'	=> $state,
         ];
         $response = self::$client->post(self::$link_base . '/_forms/default.aspx', [
           'form_params' => $accessBody
@@ -388,9 +385,9 @@ class ModuleSharepointService
         else { throw new NothingFoundFailure('Keine Ereignisse in der angegeben Sharepoint-Liste.'); }
 
       }
-      catch (GuzzleException)
+      catch (GuzzleException $ex)
       {
-        throw new FetchFailure('Fehler bei der Kommunikation');
+        throw new FetchFailure('Fehler bei der Kommunikation ## '.$ex->getMessage());
       }
 
     }
