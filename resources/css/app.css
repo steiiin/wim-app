@@ -62,7 +62,7 @@ form
 {
     --monitor-base-color: #fff;
     --monitor-contrast-color: #000;
-    --monitor-contrast-color-trans: rgba(0, 0, 0, .5);
+    --monitor-contrast-color-trans: rgba(0, 0, 0, .7);
     --monitor-border-thickness: .2vh;
     --content-title-padding: 1vh 2vh;
     --content-list-padding: 2vh;
@@ -73,7 +73,7 @@ form
 
   --monitor-base-color: #000;
   --monitor-contrast-color: #fff;
-  --monitor-contrast-color-trans: rgba(255, 255, 255, .5);
+  --monitor-contrast-color-trans: rgba(255, 255, 255, .7);
 
 }
 

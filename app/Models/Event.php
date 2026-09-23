@@ -68,6 +68,12 @@ class Event extends Model
           ->where('until', '>=', $now);
       })
       ->orWhere(function ($query) use ($todayEnd, $now) {
+        // Events later today belong on the monitor before they begin, too.
+        $query->whereNotNull('until')
+          ->whereBetween('start', [$now, $todayEnd])
+          ->where('until', '>=', $now);
+      })
+      ->orWhere(function ($query) use ($todayEnd, $now) {
         // Case 2: Event has only a start (until is null) and is NOT all-day.
         $query->whereNull('until')
           ->where('is_allday', 0)

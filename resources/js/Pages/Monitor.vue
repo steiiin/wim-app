@@ -1,418 +1,221 @@
 <script setup>
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { Head } from '@inertiajs/vue3'
+import { getSunrise, getSunset } from 'sunrise-sunset-js'
+import axios from 'axios'
+import EventView from '@/Components/EventView.vue'
+import PayloadView from '@/Components/PayloadView.vue'
 
-/**
- * Monitor - Page component
- *
- * This page is shown on the monitor.
- *
- */
+const props = defineProps({
+  station_name: { type: String, required: true },
+  station_time: { type: String, required: true },
+  station_location: { type: Object, required: true },
+  monitor_zoom: { type: Number, required: true },
+})
 
-// #region Imports
+const monitorTime = ref(new Date())
+const nightMode = ref(false)
+const updateMonitorTime = () => {
+  monitorTime.value = new Date()
+  const { lat, long } = props.station_location
+  nightMode.value = monitorTime.value > getSunset(lat, long) || monitorTime.value < getSunrise(lat, long)
+}
+const infoDateFormatter = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', weekday: 'short' })
+const infoClock = computed(() => monitorTime.value.toTimeString().slice(0, 5))
+const infoDate = computed(() => {
+  const parts = infoDateFormatter.formatToParts(monitorTime.value)
+  const part = (type) => parts.find(part => part.type === type).value.replace('.', '')
+  return `${part('day')}. ${part('month')}, ${part('weekday')}`
+})
 
-  // Vue composables
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-  import { Head } from '@inertiajs/vue3'
+const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [] })
+const hasOnceUpdated = ref(false)
+const events = computed(() => [
+  ...contentData.value.events.active,
+  ...contentData.value.events.imminent,
+  ...contentData.value.events.upcoming,
+].sort((a, b) => new Date(a.time_start) - new Date(b.time_start)))
+const information = computed(() => [
+  ...contentData.value.infos.map(item => ({ item, showTiming: true })),
+  ...contentData.value.tasks.map(item => ({ item, showTiming: true })),
+  ...contentData.value.recurring.map(item => ({ item, showTiming: false })),
+])
 
-  // 3rd-party composables
-  import { getSunrise, getSunset } from 'sunrise-sunset-js';
-  import MonitorEntry from '@/Components/MonitorEntry.vue';
-  import axios from 'axios';
-  import PayloadView from '@/Components/PayloadView.vue';
+let lastUpdated = null
+let clockTimer
+let pollTimer
+const pollController = new AbortController()
+const updateContent = async () => {
+  try {
+    const response = await axios.get('/monitor-poll', { signal: pollController.signal })
+    if (pollController.signal.aborted) return
+    contentData.value = response.data
+    hasOnceUpdated.value = true
+    lastUpdated ??= Date.now()
+    if (contentData.value.lastupdated * 1000 >= lastUpdated) window.location.reload()
+  } catch (error) {
+    if (!axios.isCancel(error)) console.error(error)
+  } finally {
+    if (!pollController.signal.aborted) pollTimer = setTimeout(updateContent, 90000)
+  }
+}
 
-// #endregion
-// #region Props
-
-  const props = defineProps({
-    station_name: {
-      type: String,
-      required: true,
-    },
-    station_time: {
-      type: String,
-      required: true,
-    },
-    station_location: {
-      type: Object,
-      required: true,
-    },
-    monitor_zoom: {
-      type: Number,
-      required: true,
-    },
-  })
-
-  // #region Header-Info
-
-    const monitorTime = ref(null);
-
-    const updateMonitorTime = () => {
-      monitorTime.value = new Date(Date.now())
-
-      const monitorDOM = document.getElementById('monitor');
-      if (!monitorDOM) { return }
-
-      const sunset = getSunset(props.station_location.lat, props.station_location.long);
-      const sunrise = getSunrise(props.station_location.lat, props.station_location.long);
-
-      if (monitorTime.value > sunset || monitorTime.value < sunrise)
-      {
-        if (!monitorDOM.hasAttribute('night-mode'))
-        {
-          monitorDOM.setAttribute('night-mode', '');
-        }
-      }
-      else
-      {
-        if (monitorDOM.hasAttribute('night-mode'))
-        {
-          monitorDOM.removeAttribute('night-mode');
-        }
-      }
-    }
-
-    // ##########################################
-
-    const infoDateFormatter = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', weekday: 'short' });
-
-    const infoClock = computed(() => monitorTime.value?.toTimeString().slice(0, 5) ?? '--:--')
-    const infoDate = computed(() => {
-      if (!monitorTime.value) { return ''}
-      const parts = infoDateFormatter.formatToParts(monitorTime.value);
-      const day = parts.find(part => part.type === 'day').value;
-      const month = parts.find(part => part.type === 'month').value.replace('.','');
-      const weekday = parts.find(part => part.type === 'weekday').value.replace('.','');
-      return `${day}. ${month}, ${weekday}`
-    })
-
-  // #endregion
-  // #region Content
-
-    const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [], lastUpdated: 0 })
-    const hasOnceUpdated = ref(false)
-
-    const lastUpdated = ref(null)
-    const lastOverflowValue = ref(0)
-
-    const hasTopics = computed(() => (contentData.value.infos.length + contentData.value.events.active.length + contentData.value.events.imminent.length) > 0)
-    const hasTasks = computed(() => (contentData.value.tasks.length + contentData.value.recurring.length) > 0)
-    const hasUpcomings = computed(() => contentData.value.events.upcoming.length > 0)
-    const hasAnyToday = computed(() => hasTopics.value || hasTasks.value)
-
-    const upcomingHeader = computed(() => hasUpcomings.value ? 'Anstehende Termine' : '&nbsp;')
-
-    const updateContent = () => {
-
-      axios.get('/monitor-poll')
-        .then(response => {
-
-          contentData.value = response.data
-          hasOnceUpdated.value = true
-
-          if (!lastUpdated.value) { lastUpdated.value = Date.now() }
-          if ((contentData.value.lastupdated * 1000) >= lastUpdated.value) {
-            window.location.reload()
-          }
-
-        })
-        .catch(error => {
-          console.error(error)
-        })
-        .finally(() => {
-          handleOverflow()
-          setTimeout(updateContent, 90000);
-        });
-
-    }
-
-    // #region Content-Overflow
-
-      const todayScrollingMargin = ref(0)
-      const todayScrollingKeyframes = ref(null)
-
-      const todayStyle = computed(() => {
-        if (todayScrollingMargin.value < 0) {
-          const duration = Math.abs(todayScrollingMargin.value / 3)
-          return `animation: ${duration}s linear infinite marquee;`
-        } else {
-          return 'animation: none;'
-        }
-      })
-
-      const handleOverflow = () => {
-
-        const today = document.getElementById('today')
-        const todayScrollContainer = document.getElementById('todayScrollContainer')
-
-        if (!today || !todayScrollContainer || !todayScrollingKeyframes.value) { return }
-
-        // ::after
-        const afterStyles  = getComputedStyle(today, '::after');
-        const afterHeightPx = afterStyles.getPropertyValue('height');
-        const afterHeight = parseFloat(afterHeightPx);
-
-        todayScrollingMargin.value = today.clientHeight - todayScrollContainer.scrollHeight
-        if (todayScrollingMargin.value == lastOverflowValue.value) { return }
-        lastOverflowValue.value = todayScrollingMargin.value
-
-        if (todayScrollingMargin.value < 0)
-        {
-          todayScrollingKeyframes.value.innerHTML = `
-            @keyframes marquee {
-              0%, 10%, 90%, 100% { transform: translateY(0); }
-              40%, 60% { transform: translateY(${todayScrollingMargin.value - afterHeight}px); }
-            }
-          `
-        }
-        else
-        {
-          todayScrollingKeyframes.value.innerHTML = ''
-        }
-
-      }
-
-    // #endregion
-
-  // #endregion
-
-// #endregion
-// #region Lifecycle
-
-  onMounted(() => {
-
-    // start monitor clock
-    const serverTimeOffset = Math.abs((new Date(props.station_time)).getTime() - Date.now());
-    if (serverTimeOffset >= 2700000)
-    {
-      console.error(`Die Server- & Monitorzeit weichen ${serverTimeOffset/1000}s voneinander ab!`)
-    }
-
-    setInterval(updateMonitorTime, 30000)
-    updateMonitorTime()
-
-    // today scrolling style element
-    todayScrollingKeyframes.value = document.createElement('style')
-    document.head.appendChild(todayScrollingKeyframes.value)
-
-    // start polling
-    updateContent()
-
-  })
-
-  onBeforeUnmount(() => {
-
-    // remove today scrolling style element
-    if (todayScrollingKeyframes.value && todayScrollingKeyframes.value.parentNode) {
-      todayScrollingKeyframes.value.parentNode.removeChild(todayScrollingKeyframes.value)
-    }
-
-  })
-
-// #endregion
-
+onMounted(() => {
+  const serverTimeOffset = Math.abs(new Date(props.station_time).getTime() - Date.now())
+  if (serverTimeOffset >= 2700000) {
+    console.error(`Die Server- & Monitorzeit weichen ${serverTimeOffset / 1000}s voneinander ab!`)
+  }
+  updateMonitorTime()
+  clockTimer = setInterval(updateMonitorTime, 30000)
+  updateContent()
+})
+onBeforeUnmount(() => {
+  clearInterval(clockTimer)
+  clearTimeout(pollTimer)
+  pollController.abort()
+})
 </script>
 
 <template>
   <Head title="Monitor" />
-  <main id="monitor" :style="{ zoom: monitor_zoom }">
+  <main id="monitor" :class="{ 'has-information': information.length }" :night-mode="nightMode ? '' : null" :style="{ zoom: monitor_zoom, '--monitor-zoom': monitor_zoom }">
     <header>
-      <name>{{ station_name }}</name>
-      <info>
-        <clock>{{ infoClock }}</clock>
-        <date>{{ infoDate }}</date>
-      </info>
+      <div class="station-name">{{ station_name }}</div>
+      <div class="station-info">
+        <div class="clock">{{ infoClock }}</div>
+        <div class="date">{{ infoDate }}</div>
+      </div>
     </header>
-    <template v-if="hasOnceUpdated">
-      <content id="today">
-        <content id="todayScrollContainer" :style="todayStyle">
-          <template v-if="hasTopics">
-            <content-title>Aktuell</content-title>
-            <content-list>
-              <MonitorEntry :item="info" v-for="info in contentData.infos" />
-              <MonitorEntry :item="event" v-for="event in contentData.events.imminent" />
-              <MonitorEntry :item="event" v-for="event in contentData.events.active" />
-            </content-list>
-          </template>
-          <template v-if="hasTasks">
-            <content-title>Aufgaben</content-title>
-            <content-list>
-              <MonitorEntry :item="task" v-for="task in contentData.tasks" />
-              <MonitorEntry :item="task" :showTiming="false" v-for="task in contentData.recurring" />
-            </content-list>
-          </template>
-          <template v-if="!hasAnyToday">
-            <content-title>Aktuell</content-title>
-            <content-list>
-              <PayloadView :payload="{ title: 'Alles erledigt!'}" />
-            </content-list>
-          </template>
-        </content>
-      </content>
-      <content id="upcoming">
-        <content-title v-html="upcomingHeader"></content-title>
-        <content-list>
-          <MonitorEntry :item="event" :show-type-icon="false" v-for="event in contentData.events.upcoming" />
-        </content-list>
-      </content>
-    </template>
+    <section id="events" class="monitor-panel" aria-labelledby="events-heading">
+      <h1 id="events-heading">TERMINE</h1>
+      <div class="panel-content">
+        <template v-if="hasOnceUpdated">
+          <v-timeline v-if="events.length" class="events-timeline" side="end" align="center" truncate-line="both"
+            :line-thickness="1" line-color="var(--monitor-contrast-color)" dot-color="var(--monitor-contrast-color)">
+            <EventView v-for="(event, index) in events" :key="index" :item="event" :now="monitorTime" />
+          </v-timeline>
+          <p v-else class="empty-state">Keine Termine</p>
+        </template>
+      </div>
+    </section>
+    <section v-if="information.length" id="information" class="monitor-panel" aria-labelledby="information-heading">
+      <h1 id="information-heading">INFORMATIONEN</h1>
+      <div class="panel-content information-list">
+        <template v-if="hasOnceUpdated">
+          <PayloadView v-for="(entry, index) in information" :key="index" :payload="entry.item" :show-timing="entry.showTiming" />
+        </template>
+      </div>
+    </section>
   </main>
 </template>
-<style lang="css">
 
+<style>
 html, body, #app {
   font-family: 'Fredoka' !important;
   margin: 0 !important;
   padding: 0 !important;
   width: 100% !important;
   height: 100% !important;
-  font-size: 2vh !important;
+  font-size: 1.8vh !important;
 }
-
 </style>
+
 <style lang="scss" scoped>
+#monitor {
 
-#monitor
-{
+  --monitor-heading-size: 0.9rem;
 
-  height: 100%;
-
+  // Compensate for CSS zoom so the kiosk always fits the physical viewport.
+  width: calc(100vw / var(--monitor-zoom));
+  height: calc(100vh / var(--monitor-zoom));
+  overflow: clip;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  grid-template-rows: 10% 90%;
-  gap: 0 0;
-  grid-template-areas:
-    "header header header"
-    "today today upcoming";
-  z-index: 1000;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 10% minmax(0, 1fr);
+  background: var(--monitor-base-color);
+  color: var(--monitor-contrast-color);
 
-  header
-  {
-    grid-area: header;
+  &.has-information { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 
-    background-color: var(--monitor-base-color);
-    color: var(--monitor-contrast-color);
-
+  header {
+    grid-column: 1 / -1;
     display: flex;
     align-items: center;
     padding: var(--content-title-padding);
-    font-family: 'Fredoka';
-
-    name
-    {
-      font-size: 2rem;
-      flex: 1;
-    }
-    info
-    {
-      * {
-        display: block;
-        text-align: right;
-        line-height: 1;
-      }
-
-      clock { font-weight: 300; }
-      date { font-size: 0.8rem; }
-    }
+    min-width: 0;
   }
-
-  content
-  {
-    display: flex;
-    flex-direction: column;
-
-    background-color: var(--monitor-base-color);
-    color: var(--monitor-contrast-color);
-
-    content-title
-    {
-      padding: var(--content-title-padding);
-      background-color: var(--monitor-contrast-color);
-      color: var(--monitor-base-color);
-      font-family: 'Fredoka';
-      font-size: 0.9rem;
-      font-weight: 500;
-    }
-
-    content-list
-    {
-
-      padding: 0 var(--content-list-padding);
-
-      article
-      {
-        border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
-      }
-
-      article:last-child
-      {
-        border: none;
-      }
-
-    }
-
-  }
-
-  #today
-  {
-
-    grid-area: today;
-
-    overflow: clip;
-    position: relative;
-
-    &::before
-    {
-      content: "";
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 1vh;
-      background: linear-gradient(to bottom, var(--monitor-contrast-color-trans), transparent);
-      pointer-events: none;
-      z-index: 10;
-    }
-    &::after
-    {
-      content: "";
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: 2vh;
-      background: linear-gradient(to bottom, transparent, var(--monitor-base-color));
-      pointer-events: none;
-      z-index: 10;
-    }
-
-  }
-
-  #todayScrollContainer
-  {
-    z-index: 9;
-  }
-
-  #upcoming
-  {
-    grid-area: upcoming;
-    border-left: var(--monitor-border-thickness) solid var(--monitor-contrast-color) ;
-
-    overflow: clip;
-    position: relative;
-
-    &::after
-    {
-      content: "";
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      width: 100%;
-      height: 33%;
-      background: linear-gradient(to bottom, transparent, var(--monitor-base-color));
-      pointer-events: none;
-    }
-
-  }
-
+  .station-name { font-size: 2rem; flex: 1; min-width: 0; }
+  .station-info { text-align: right; line-height: 1; }
+  .clock { font-weight: 300; }
+  .date { font-size: 0.8rem; }
 }
+.monitor-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
 
+  h1 {
+    flex: none;
+    margin: 0;
+    padding: var(--content-title-padding);
+    background: var(--monitor-contrast-color);
+    color: var(--monitor-base-color);
+    font-size: var(--monitor-heading-size);
+    font-weight: 500;
+  }
+}
+.panel-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: clip;
+  position: relative;
+  padding: 0 var(--content-list-padding);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2vh;
+    background: linear-gradient(to bottom, transparent, var(--monitor-base-color));
+    pointer-events: none;
+    z-index: 2;
+  }
+}
+#information { border-left: var(--monitor-border-thickness) solid var(--monitor-contrast-color); }
+#events .panel-content { container: events / inline-size; }
+.information-list :deep(article) {
+  overflow-wrap: anywhere;
+  border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
+  &:last-child { border-bottom: none; }
+}
+.information-list :deep(payload-title) { font-size: var(--monitor-heading-size); }
+.information-list :deep(payload-meta),
+.information-list :deep(payload-description),
+.information-list :deep(payload-timing) { font-size: 0.8rem; }
+.empty-state { margin: 1rem 0; font-size: var(--monitor-heading-size); }
+.events-timeline.v-timeline {
+  height: auto;
+  width: 100%;
+  padding: 1rem 0;
+  grid-template-columns: minmax(0, clamp(2.5rem, 12%, 5rem)) min-content minmax(0, 1fr);
+  row-gap: 0;
+
+  :deep(.v-timeline-item .v-timeline-item__body) {
+    width: 100%;
+    min-width: 0;
+    padding: 0 0 0 0.75rem;
+  }
+  :deep(.v-timeline-item .v-timeline-item__opposite) {
+    width: 100%;
+    min-width: 0;
+    padding: 0 0.75rem 0 0;
+  }
+  :deep(.v-timeline-item .v-timeline-divider) { padding-block: 0; }
+  :deep(.v-timeline-divider__before),
+  :deep(.v-timeline-divider__after) { opacity: 0.2; }
+  :deep(.v-timeline-divider__dot) { background: var(--monitor-base-color); }
+}
 </style>
