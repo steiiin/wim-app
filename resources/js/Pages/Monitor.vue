@@ -176,7 +176,7 @@ html, body, #app {
   background: var(--monitor-base-color);
   color: var(--monitor-contrast-color);
 
-  &.has-information { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  &.has-information { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
 
   header {
     grid-column: 1 / -1;
