@@ -2,19 +2,11 @@
 
 namespace App\Http\Controllers\Modules;
 
-use App\Exceptions\ServiceFailures\AuthFailure;
-use App\Exceptions\ServiceFailures\FetchFailure;
-use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Services\ModuleSharepointService;
-use App\Services\PayloadService;
 use App\Services\SettingService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\ValidationException;
 
 class SharepointController extends Controller
 {
@@ -24,7 +16,7 @@ class SharepointController extends Controller
    * @param \Illuminate\Http\Request $request
    * @return \Illuminate\Http\Response
    */
-  public function store(Request $request)
+  public function store(Request $request, ModuleSharepointService $service)
   {
 
     $data = $request->validate([
@@ -40,13 +32,12 @@ class SharepointController extends Controller
     try {
 
       // update with new data
-      $sharepointElements = ModuleSharepointService::fetchEvents(
+      $service->sync(
         $data['sharepoint_link'] ?? SettingService::getModuleSharepointLink(),
         $data['username'] ?? SettingService::getModuleSharepointUser(),
         $data['password'] ?? SettingService::getModuleSharepointPass(),
         $data['secret'] ?? SettingService::getModuleSharepointSecret(),
       );
-      $this->updateEntries($sharepointElements);
 
     }
     catch (\Throwable $ex)
@@ -87,44 +78,6 @@ class SharepointController extends Controller
   }
 
   /**
-   * API: Updates the entries using the stored module settings.
-   * @return \Illuminate\Http\Response
-   */
-  public function update()
-  {
-
-    $username = SettingService::getModuleSharepointUser();
-    $password = SettingService::getModuleSharepointPass();
-    $secret = SettingService::getModuleSharepointSecret();
-    $link = SettingService::getModuleSharepointLink();
-
-    // if (!$username || strlen(trim($username)) === 0 || !$password || strlen(trim($password)) === 0 || !$link || strlen(trim($link)) === 0 || !$secret || strlen(trim($secret)) === 0) {
-    //   return $this->handleLog(self::AUTOTAG, 'No credentials/link stored. Canceled Update.');
-    // }
-    // TODO: remove check
-
-    try
-    {
-
-      $this->handleLog(self::AUTOTAG, 'fetching calendarevents');
-      $sharepointElements = ModuleSharepointService::fetchEvents($link, $username, $password, $secret);
-
-      $this->handleLog(self::AUTOTAG, 'recreate auto-events in WIM');
-      $this->updateEntries($sharepointElements);
-
-      return $this->handleLog(self::AUTOTAG, 'fetch finished');
-
-    }
-    catch(\Throwable $ex)
-    {
-      return $this->handleModuleFailure(self::AUTOTAG, $ex, self::FAILURE_LOG);
-    }
-
-  }
-
-  // #####################################################################
-
-  /**
    * Collect module informations.
    * @return array
    */
@@ -144,45 +97,6 @@ class SharepointController extends Controller
 
   // #####################################################################
 
-  public const AUTOTAG = 'sharepoint';
+  public const AUTOTAG = ModuleSharepointService::AUTOTAG;
 
-  // #####################################################################
-
-  /**
-   * Fetches all events in the link, removes old auto-added events and create event entries for the new ones.
-   * @param array $trashEvents Raw events mapped by ModuleTrashService.
-   * @return void
-   */
-  private function updateEntries(array $sharepointElements)
-  {
-
-    // remove old ones
-    Event::where('autotag', self::AUTOTAG)->delete();
-
-    // create new ones
-    DB::transaction(function () use ($sharepointElements) {
-
-      foreach ($sharepointElements as $element)
-      {
-
-        $payload = [
-          'title' => $element->title,
-          'vehicle' => $element->category,
-          'meta' => $element->meta,
-          'description' => $element->description,
-        ];
-        PayloadService::normalize($payload);
-
-        Event::create([
-          'payload' => $payload,
-          'start' => $element->start,
-          'until' => $element->until,
-          'is_allday' => $element->is_allday,
-          'autotag' => self::AUTOTAG,
-        ]);
-
-      }
-
-    });
-  }
 }

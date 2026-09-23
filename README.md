@@ -109,15 +109,27 @@ npm update
 
 **Automatische Module**
 - *Abfallkalender:* Parst ein Online-iCal-Abo nach Abholterminen und fügt Aufgaben hinzu.
+- *Wachenkalender:* Verwaltet mehrere iCalendar-Abonnements mit eigenen Symbolen und importiert Termine für die nächsten 90 Tage.
 - *Sharepoint-Liste:* Synchronisiert einen Sharepointkalender mit der Terminagenda des WIM.
 
 ### CronJobs
 Um die Module automatisch abzurufen und Hintergrundaufgaben regelmäßig durchzuführen, sollten folgende CronJobs erstellt werden:
 ```
-0 0   * * 1 curl -k "https://localhost/api/trash"
-0 */6 * * * curl -k "https://localhost/api/sharepoint"
-0 20  * * * curl -k "https://localhost/api/do-jobs"
+0 0   * * 1 cd /var/www/wim-app && php artisan module:trash:fetch >> storage/logs/trash.log 2>&1
+0 */6 * * * cd /var/www/wim-app && php artisan module:sharepoint:fetch >> storage/logs/sharepoint.log 2>&1
+0 */3 * * * cd /var/www/wim-app && php artisan module:ical:fetch >> storage/logs/ical.log 2>&1
+0 20  * * * cd /var/www/wim-app && php artisan app:do-jobs >> storage/logs/do-jobs.log 2>&1
 ```
+
+Alle Cronjobs laufen als App-Benutzer (z. B. Einträge mit `sudo crontab -u www-data -e` anlegen); den Projektpfad bei Bedarf anpassen.
+Die bisherigen `curl`-Cronjobs durch diese Einträge ersetzen. Die HTTP-Endpunkte `/api/trash`, `/api/sharepoint` und `/api/do-jobs` entfallen; `/api/client-error` bleibt für Browser-Fehlerberichte bestehen.
+Nach dem Update den Route-Cache im Projektverzeichnis mit `sudo -u www-data php artisan route:clear` und `sudo -u www-data php artisan route:cache` erneuern.
+Alle Befehle können auch manuell als App-Benutzer ausgeführt werden. Sie liefern Exit-Code `0` bei Erfolg und `1` bei Fehlern; nicht konfigurierte Abfall- oder SharePoint-Module werden mit einer Meldung und Exit-Code `0` übersprungen.
+Ein manueller Abruf ist mit `php artisan module:ical:fetch` möglich.
+Zwischen Kalendern wartet der Befehl 60 Sekunden; parallele Aufrufe werden über eine Cache-Sperre verhindert.
+Im Adminbereich werden letzter Versuch, letzter Erfolg und Fehler je Kalender angezeigt.
+Beim Speichern werden die Links geprüft; neue Termine erscheinen nach dem nächsten CLI-Abruf.
+Fehlgeschlagene Abrufe erhalten die bisherigen Termine, gültige leere Kalender entfernen sie.
 
 ### Zwischenspeicher löschen
 Nachdem Änderungen am Projekt durchgeführt wurden (z.B. env-Datei), muss der Zwischenspeicher gelöscht werden:

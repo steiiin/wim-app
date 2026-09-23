@@ -5,9 +5,28 @@ namespace App\Services;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SettingService
 {
+
+  const KEY_MODULE_ICAL_SUBSCRIPTIONS = 'module_ical_subscriptions';
+
+  public static function getModuleIcalSubscriptions(): array
+  {
+    return json_decode(self::loadSetting(self::KEY_MODULE_ICAL_SUBSCRIPTIONS, '[]'), true);
+  }
+
+  // Configuration changes and event replacement share the same database lock.
+  public static function updateModuleIcalSubscriptions(callable $update): void
+  {
+    Setting::firstOrCreate(['key' => self::KEY_MODULE_ICAL_SUBSCRIPTIONS], ['value' => '[]']);
+    DB::transaction(function () use ($update) {
+      $setting = Setting::where('key', self::KEY_MODULE_ICAL_SUBSCRIPTIONS)->lockForUpdate()->firstOrFail();
+      $setting->value = json_encode($update(json_decode($setting->value, true)), JSON_THROW_ON_ERROR);
+      $setting->save();
+    });
+  }
 
   const KEY_LASTUPDATED = 'settings_last_updated';
 

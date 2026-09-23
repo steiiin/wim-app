@@ -33,6 +33,9 @@ const props = defineProps({
   }
 })
 
+const customIcon = computed(() => ['mdi-ambulance', 'mdi-medical-bag', 'mdi-hand-wash', 'mdi-information'].includes(props.payload?.icon) ? props.payload.icon : null)
+const showIcon = computed(() => props.showTypeIcon || !!customIcon.value)
+
 const isInfo = computed(() => props.payload?.type === 'info')
 const isEvent = computed(() => props.payload?.type === 'event')
 
@@ -103,10 +106,11 @@ const hasDescription = computed(() => !!props.payload?.description)
 
 <template>
   <article class="payload" :class="{
-    'payload-no-pre': !showTypeIcon,
+    'payload-no-pre': !showIcon,
     'payload-fade': hasToFade }">
     <article-pre>
-      <v-icon v-if="isInfo" icon="mdi-information" />
+      <v-icon v-if="customIcon" :icon="customIcon" />
+      <v-icon v-else-if="isInfo" icon="mdi-information" />
       <template v-else-if="isEvent">
         <v-icon v-if="hasBegun" icon="mdi-calendar" />
         <v-icon v-else icon="mdi-calendar-clock" />

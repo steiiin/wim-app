@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
+use App\Models\Task;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
@@ -12,6 +14,43 @@ use Sabre\VObject\Reader;
 
 class ModuleTrashService
 {
+
+  public const AUTOTAG = 'trash';
+
+  public function sync(string $link): void
+  {
+    $trashElements = static::fetchElements($link);
+    $this->updateEntries($trashElements);
+  }
+
+  private function updateEntries(array $trashElements): void
+  {
+
+    DB::transaction(function () use ($trashElements)
+    {
+      Task::where('autotag', self::AUTOTAG)->delete();
+
+      foreach ($trashElements as $trashElement)
+      {
+
+        $payload = [
+          'title' => $trashElement->dumpsterName . ' an die Straße stellen',
+          'meta' => 'Abfallkalender'
+        ];
+        PayloadService::normalize($payload);
+
+        Task::create([
+          'payload' => $payload,
+          'from' => $trashElement->pickupDate->copy()->addHours(-9),
+          'dueto' => $trashElement->pickupDate->copy()->addHours(6),
+          'autotag' => self::AUTOTAG,
+        ]);
+
+      }
+
+    });
+
+  }
 
   /**
    * Parse the given iCal URL.

@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Exceptions\ServiceFailures\AuthFailure;
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
+use App\Models\Event;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use OTPHP\TOTP;
 use GuzzleHttp\Client;
@@ -13,6 +15,44 @@ use GuzzleHttp\Exception\GuzzleException;
 
 class ModuleSharepointService
 {
+
+  public const AUTOTAG = 'sharepoint';
+
+  public function sync(string $link, string $username, string $password, string $secret): void
+  {
+    $sharepointElements = static::fetchEvents($link, $username, $password, $secret);
+    $this->updateEntries($sharepointElements);
+  }
+
+  private function updateEntries(array $sharepointElements): void
+  {
+
+    DB::transaction(function () use ($sharepointElements) {
+      Event::where('autotag', self::AUTOTAG)->delete();
+
+      foreach ($sharepointElements as $element)
+      {
+
+        $payload = [
+          'title' => $element->title,
+          'vehicle' => $element->category,
+          'meta' => $element->meta,
+          'description' => $element->description,
+        ];
+        PayloadService::normalize($payload);
+
+        Event::create([
+          'payload' => $payload,
+          'start' => $element->start,
+          'until' => $element->until,
+          'is_allday' => $element->is_allday,
+          'autotag' => self::AUTOTAG,
+        ]);
+
+      }
+
+    });
+  }
 
   private static string $username;
   private static string $password;

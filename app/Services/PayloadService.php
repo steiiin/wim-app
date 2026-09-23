@@ -29,6 +29,8 @@ class PayloadService
     if (isset($payload['meta'])) { $normalized['meta'] = $payload['meta']; }
     if (isset($payload['description'])) { $normalized['description'] = $payload['description']; }
 
+    if (isset($payload['icon'])) { $normalized['icon'] = $payload['icon']; }
+
     $payload = $normalized;
 
   }
