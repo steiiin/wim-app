@@ -55,7 +55,10 @@ const timing = computed(() => {
       <h2>{{ item.title || 'Ohne Titel' }}</h2>
       <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
       <div v-if="item.description" class="event-description">{{ item.description }}</div>
-      <div class="event-timing">{{ timing.dates }} {{ timing.times }}</div>
+      <div class="event-timing">
+        <v-icon icon="mdi-clock-outline" />
+        <span>{{ timing.dates }} {{ timing.times }}</span>
+      </div>
     </div>
   </article>
 </template>
@@ -72,8 +75,7 @@ const timing = computed(() => {
   font-size: var(--event-size);
   &--prominent { --event-size: 0.9rem; --event-padding: 0.85rem; }
   &:not(.event-view--prominent) {
-    .event-body,
-    .event-identity { opacity: 0.7; }
+    opacity: 0.7;
   }
 }
 .event-identity {
@@ -102,7 +104,15 @@ const timing = computed(() => {
   overflow-wrap: anywhere;
   h2 { font-size: min(1em, var(--monitor-heading-size, 0.9rem)); line-height: 1.15; font-weight: 500; margin: 0; }
 }
-.event-timing { margin-top: 0.3em; font-size: 0.8em; font-weight: 500; }
+.event-timing {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.3em;
+  font-size: 0.8em;
+  font-weight: 500;
+  .v-icon { font-size: 1em; }
+}
 .event-meta {
   margin-top: 0.3em;
   font-family: 'Inter';

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import { getSunrise, getSunset } from 'sunrise-sunset-js'
 import axios from 'axios'
@@ -30,16 +30,48 @@ const infoDate = computed(() => {
 
 const contentData = ref({ infos: [], events: { active: [], imminent: [], upcoming: [] }, tasks: [], recurring: [] })
 const hasOnceUpdated = ref(false)
-const events = computed(() => [
-  ...contentData.value.events.active,
-  ...contentData.value.events.imminent,
-  ...contentData.value.events.upcoming,
-].sort((a, b) => new Date(a.time_start) - new Date(b.time_start)))
+const eventGroups = computed(() => [
+  { key: 'active', label: 'HEUTE' },
+  { key: 'imminent', label: 'MORGEN' },
+  { key: 'upcoming', label: 'ANSTEHEND' },
+].map(group => ({
+  ...group,
+  events: [...contentData.value.events[group.key]]
+    .sort((a, b) => new Date(a.time_start) - new Date(b.time_start)),
+})).filter(group => group.events.length))
 const information = computed(() => [
   ...contentData.value.infos.map(item => ({ item, showTiming: true })),
   ...contentData.value.tasks.map(item => ({ item, showTiming: true })),
   ...contentData.value.recurring.map(item => ({ item, showTiming: false })),
 ])
+
+const eventsContent = ref(null)
+const eventsList = ref(null)
+const upcomingGroup = ref(null)
+const upcomingLabelTop = ref('50%')
+const setUpcomingGroup = (element) => { upcomingGroup.value = element }
+let eventsResizeObserver
+const updateUpcomingLabelPosition = () => {
+  if (!eventsContent.value || !upcomingGroup.value) {
+    upcomingLabelTop.value = '50%'
+    return
+  }
+  const group = upcomingGroup.value.getBoundingClientRect()
+  const visibleHeight = Math.min(group.height, eventsContent.value.getBoundingClientRect().bottom - group.top)
+  // A percentage keeps the visible midpoint correct at any monitor zoom.
+  upcomingLabelTop.value = visibleHeight > 0 && group.height > 0
+    ? `${visibleHeight / group.height * 50}%`
+    : '50%'
+}
+const observeEventLayout = () => {
+  if (!eventsResizeObserver) return
+  eventsResizeObserver.disconnect()
+  for (const element of [eventsContent.value, eventsList.value, upcomingGroup.value]) {
+    if (element) eventsResizeObserver.observe(element)
+  }
+  updateUpcomingLabelPosition()
+}
+watch([eventsContent, eventsList, upcomingGroup, eventGroups, () => props.monitor_zoom], observeEventLayout, { flush: 'post' })
 
 let lastUpdated = null
 let clockTimer
@@ -61,6 +93,8 @@ const updateContent = async () => {
 }
 
 onMounted(() => {
+  eventsResizeObserver = new ResizeObserver(updateUpcomingLabelPosition)
+  observeEventLayout()
   const serverTimeOffset = Math.abs(new Date(props.station_time).getTime() - Date.now())
   if (serverTimeOffset >= 2700000) {
     console.error(`Die Server- & Monitorzeit weichen ${serverTimeOffset / 1000}s voneinander ab!`)
@@ -70,6 +104,7 @@ onMounted(() => {
   updateContent()
 })
 onBeforeUnmount(() => {
+  eventsResizeObserver?.disconnect()
   clearInterval(clockTimer)
   clearTimeout(pollTimer)
   pollController.abort()
@@ -88,10 +123,17 @@ onBeforeUnmount(() => {
     </header>
     <section id="events" class="monitor-panel" aria-labelledby="events-heading">
       <h1 id="events-heading">TERMINE</h1>
-      <div class="panel-content">
+      <div ref="eventsContent" class="panel-content events-content">
         <template v-if="hasOnceUpdated">
-          <div v-if="events.length" class="events-list">
-            <EventView v-for="(event, index) in events" :key="index" :item="event" :now="monitorTime" />
+          <div v-if="eventGroups.length" ref="eventsList" class="events-list">
+            <section v-for="group in eventGroups" :key="group.key" :ref="group.key === 'upcoming' ? setUpcomingGroup : undefined" class="event-group" :class="{ 'event-group--single': group.events.length === 1 }" :aria-labelledby="`events-${group.key}-heading`">
+              <h2 :id="`events-${group.key}-heading`" class="event-group-banner" :class="`event-group-banner--${group.key}`" :style="{ '--event-label-top': group.key === 'upcoming' ? upcomingLabelTop : null }">
+                <span>{{ group.label }}</span>
+              </h2>
+              <div class="event-group-items">
+                <EventView v-for="(event, index) in group.events" :key="index" :item="event" :now="monitorTime" />
+              </div>
+            </section>
           </div>
           <p v-else class="empty-state">Keine Termine</p>
         </template>
@@ -185,7 +227,7 @@ html, body, #app {
 }
 #information { border-left: var(--monitor-border-thickness) solid var(--monitor-contrast-color); }
 .information-list :deep(article),
-.events-list :deep(article) {
+.event-group-items :deep(article) {
   overflow-wrap: anywhere;
   border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
   &:last-child { border-bottom: none; }
@@ -195,7 +237,64 @@ html, body, #app {
 .information-list :deep(payload-description),
 .information-list :deep(payload-timing) { font-size: 0.8rem; }
 .empty-state { margin: 1rem 0; font-size: var(--monitor-heading-size); }
-.events-list {
-  padding: 1rem 0;
+.events-content {
+  padding: 0;
+
+  &::after { left: 2rem; }
+  .empty-state { margin-inline: var(--content-list-padding); }
+}
+.event-group {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+
+  &--single {
+    min-height: 6rem;
+
+    .event-group-items {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+  }
+
+  &:not(:last-child) .event-group-items {
+    border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
+  }
+}
+.event-group-banner {
+  position: relative;
+  margin: 0;
+  background-color: #000;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 1.2;
+
+  &--imminent,
+  &--upcoming {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent calc(var(--hatch-spacing) - 1px),
+      rgba(255, 255, 255, 0.35) calc(var(--hatch-spacing) - 1px),
+      rgba(255, 255, 255, 0.35) var(--hatch-spacing)
+    );
+  }
+  &--imminent { --hatch-spacing: 0.5rem; }
+  &--upcoming { --hatch-spacing: 0.25rem; }
+
+  span {
+    position: absolute;
+    top: var(--event-label-top, 50%);
+    left: 50%;
+    padding: 0.15rem 0.3rem;
+    background: #000;
+    white-space: nowrap;
+    transform: translate(-50%, -50%) rotate(-90deg);
+  }
+}
+.event-group-items {
+  min-width: 0;
+  padding-inline: var(--content-list-padding);
 }
 </style>
