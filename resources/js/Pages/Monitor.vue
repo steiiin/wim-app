@@ -90,10 +90,9 @@ onBeforeUnmount(() => {
       <h1 id="events-heading">TERMINE</h1>
       <div class="panel-content">
         <template v-if="hasOnceUpdated">
-          <v-timeline v-if="events.length" class="events-timeline" side="end" align="center" truncate-line="both"
-            :line-thickness="1" line-color="var(--monitor-contrast-color)" dot-color="var(--monitor-contrast-color)">
+          <div v-if="events.length" class="events-list">
             <EventView v-for="(event, index) in events" :key="index" :item="event" :now="monitorTime" />
-          </v-timeline>
+          </div>
           <p v-else class="empty-state">Keine Termine</p>
         </template>
       </div>
@@ -185,8 +184,8 @@ html, body, #app {
   }
 }
 #information { border-left: var(--monitor-border-thickness) solid var(--monitor-contrast-color); }
-#events .panel-content { container: events / inline-size; }
-.information-list :deep(article) {
+.information-list :deep(article),
+.events-list :deep(article) {
   overflow-wrap: anywhere;
   border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
   &:last-child { border-bottom: none; }
@@ -196,26 +195,7 @@ html, body, #app {
 .information-list :deep(payload-description),
 .information-list :deep(payload-timing) { font-size: 0.8rem; }
 .empty-state { margin: 1rem 0; font-size: var(--monitor-heading-size); }
-.events-timeline.v-timeline {
-  height: auto;
-  width: 100%;
+.events-list {
   padding: 1rem 0;
-  grid-template-columns: minmax(0, clamp(2.5rem, 12%, 5rem)) min-content minmax(0, 1fr);
-  row-gap: 0;
-
-  :deep(.v-timeline-item .v-timeline-item__body) {
-    width: 100%;
-    min-width: 0;
-    padding: 0 0 0 0.75rem;
-  }
-  :deep(.v-timeline-item .v-timeline-item__opposite) {
-    width: 100%;
-    min-width: 0;
-    padding: 0 0.75rem 0 0;
-  }
-  :deep(.v-timeline-item .v-timeline-divider) { padding-block: 0; }
-  :deep(.v-timeline-divider__before),
-  :deep(.v-timeline-divider__after) { opacity: 0.2; }
-  :deep(.v-timeline-divider__dot) { background: var(--monitor-base-color); }
 }
 </style>

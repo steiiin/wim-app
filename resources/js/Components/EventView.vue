@@ -33,7 +33,7 @@ const timing = computed(() => {
   }
   const sameDay = !end.value || DateHelper.isSameDay(start.value, end.value)
   const dates = sameDay ? dateLabel(start.value) : `${dateLabel(start.value)} – ${dateLabel(end.value)}`
-  if (props.item.is_allday) return { dates, times: 'Ganztägig' }
+  if (props.item.is_allday) return { dates, times: '' }
   if (!sameDay) return {
     dates: `${dateLabel(start.value)} ${DateHelper.formatTime(start.value)} –`,
     times: `${dateLabel(end.value)} ${DateHelper.formatTime(end.value)}`,
@@ -46,36 +46,34 @@ const timing = computed(() => {
 </script>
 
 <template>
-  <v-timeline-item class="event-view" :class="{ 'event-view--prominent': prominent }" :size="prominent ? 16 : 12" fill-dot>
-    <template #opposite>
-      <div class="event-identity">
-        <v-icon :icon="icon" />
-        <span v-if="item.vehicle" class="event-vehicle">{{ item.vehicle }}</span>
-      </div>
-    </template>
-    <article class="event-body">
-      <div class="event-timing">
-        <div>{{ timing.dates }}</div>
-        <div class="event-time">{{ timing.times }}</div>
-      </div>
-      <div class="event-payload">
-        <h2>{{ item.title || 'Ohne Titel' }}</h2>
-        <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
-        <div v-if="item.description" class="event-description">{{ item.description }}</div>
-      </div>
-    </article>
-  </v-timeline-item>
+  <article class="event-view" :class="{ 'event-view--prominent': prominent }">
+    <div class="event-identity">
+      <v-icon :icon="icon" />
+      <span v-if="item.vehicle" class="event-vehicle">{{ item.vehicle }}</span>
+    </div>
+    <div class="event-body">
+      <h2>{{ item.title || 'Ohne Titel' }}</h2>
+      <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
+      <div v-if="item.description" class="event-description">{{ item.description }}</div>
+      <div class="event-timing">{{ timing.dates }} {{ timing.times }}</div>
+    </div>
+  </article>
 </template>
 
 <style lang="scss" scoped>
 .event-view {
   --event-size: 0.8rem;
   --event-padding: 0.65rem;
+  display: grid;
+  grid-template-columns: minmax(0, clamp(2.5rem, 12%, 5rem)) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+  padding-block: var(--event-padding);
+  font-size: var(--event-size);
   &--prominent { --event-size: 0.9rem; --event-padding: 0.85rem; }
   &:not(.event-view--prominent) {
     .event-body,
-    .event-identity,
-    :deep(.v-timeline-divider__inner-dot) { opacity: 0.7; }
+    .event-identity { opacity: 0.7; }
   }
 }
 .event-identity {
@@ -83,8 +81,7 @@ const timing = computed(() => {
   flex-direction: column;
   align-items: center;
   gap: 0.35em;
-  padding-block: var(--event-padding);
-  font-size: var(--event-size);
+  min-width: 0;
   .v-icon { font-size: 1.5em; }
 }
 .event-vehicle {
@@ -100,21 +97,12 @@ const timing = computed(() => {
   overflow-wrap: anywhere;
 }
 .event-body {
-  display: grid;
-  grid-template-columns: minmax(0, clamp(5rem, 15%, 10rem)) minmax(0, 1fr);
-  gap: 0.8rem;
-  align-items: center;
-  padding-block: var(--event-padding);
-  font-size: var(--event-size);
+  min-width: 0;
   line-height: 1.2;
   overflow-wrap: anywhere;
-}
-.event-timing { font-size: 0.8em; font-weight: 500; }
-.event-time { margin-top: 0.2em; }
-.event-payload {
-  min-width: 0;
   h2 { font-size: min(1em, var(--monitor-heading-size, 0.9rem)); line-height: 1.15; font-weight: 500; margin: 0; }
 }
+.event-timing { margin-top: 0.3em; font-size: 0.8em; font-weight: 500; }
 .event-meta {
   margin-top: 0.3em;
   font-family: 'Inter';
@@ -123,10 +111,4 @@ const timing = computed(() => {
   text-transform: uppercase;
 }
 .event-description { margin-top: 0.25em; font-size: 0.85em; }
-@container events (max-width: 28rem) {
-  .event-body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.4rem;
-  }
-}
 </style>
