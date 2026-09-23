@@ -234,8 +234,7 @@ html, body, #app {
 }
 .information-list :deep(payload-title) { font-size: var(--monitor-heading-size); }
 .information-list :deep(payload-meta),
-.information-list :deep(payload-description),
-.information-list :deep(payload-timing) { font-size: 0.8rem; }
+.information-list :deep(payload-description) { font-size: 0.8rem; }
 .empty-state { margin: 1rem 0; font-size: var(--monitor-heading-size); }
 .events-content {
   padding: 0;

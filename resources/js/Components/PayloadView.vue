@@ -14,6 +14,7 @@ import { ref, computed } from 'vue'
 
 // Local components
 import { DateHelper } from '@/Utils/DateHelper';
+import { payloadIcons } from '@/Utils/PayloadIcons'
 
 // #endregion
 // #region Props
@@ -33,7 +34,7 @@ const props = defineProps({
   }
 })
 
-const customIcon = computed(() => ['mdi-ambulance', 'mdi-medical-bag', 'mdi-hand-wash', 'mdi-information'].includes(props.payload?.icon) ? props.payload.icon : null)
+const customIcon = computed(() => payloadIcons.includes(props.payload?.icon) ? props.payload.icon : null)
 const showIcon = computed(() => props.showTypeIcon || !!customIcon.value)
 
 const isInfo = computed(() => props.payload?.type === 'info')
@@ -207,7 +208,7 @@ article {
 
       display: flex;
       align-items: center;
-      font-size: 0.9rem;
+      font-size: 0.72rem;
       font-weight: 500;
       text-transform: uppercase;
 
@@ -215,7 +216,7 @@ article {
       gap: .2rem;
 
       .v-icon {
-        font-size: 1rem;
+        font-size: 1em;
       }
 
     }

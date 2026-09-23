@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Modules\SharepointController;
 use App\Http\Controllers\Modules\TrashController;
 use App\Models\Event;
 use App\Models\Info;
@@ -26,7 +25,6 @@ class AdminController extends Controller
             'recurrings' => Recurring::all(),
             'moduleIcalSubscription' => ['calendars' => SettingService::getModuleIcalSubscriptions()],
             'moduleTrash' => array_merge([ 'calendar_link' => SettingService::getModuleTrashLink() ], TrashController::getHealth()),
-            'moduleSharepoint' => array_merge([ 'sharepoint_link' => SettingService::getModuleSharepointLink(), 'username' => SettingService::getModuleSharepointUser() ], SharepointController::getHealth()),
         ]);
     }
 

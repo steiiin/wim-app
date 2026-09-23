@@ -35,7 +35,8 @@ class ModuleTrashService
 
         $payload = [
           'title' => $trashElement->dumpsterName . ' an die Straße stellen',
-          'meta' => 'Abfallkalender'
+          'vehicle' => 'Abfall',
+          'icon' => 'mdi-trash-can',
         ];
         PayloadService::normalize($payload);
 

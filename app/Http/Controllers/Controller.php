@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\ServiceFailure;
-use App\Exceptions\ServiceFailures\AuthFailure;
 use App\Exceptions\ServiceFailures\FetchFailure;
 use App\Exceptions\ServiceFailures\NothingFoundFailure;
 use Illuminate\Support\Facades\Log;
@@ -19,9 +18,7 @@ class Controller
   {
 
     $failure = '[General]';
-    if ($ex instanceof AuthFailure) {
-      $failure = '[AuthFailure]';
-    } else if ($ex instanceof FetchFailure) {
+    if ($ex instanceof FetchFailure) {
       $failure = '[FetchFailure]';
     } else if ($ex instanceof NothingFoundFailure) {
       $failure = '[NothingFoundFailure]';
