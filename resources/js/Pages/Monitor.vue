@@ -268,6 +268,7 @@ html, body, #app {
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
+  border-bottom: var(--monitor-border-thickness) solid var(--monitor-contrast-color);
 
   &--imminent,
   &--upcoming {
