@@ -5,9 +5,28 @@ namespace App\Services;
 use App\Models\Setting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SettingService
 {
+
+  const KEY_MODULE_ICAL_SUBSCRIPTIONS = 'module_ical_subscriptions';
+
+  public static function getModuleIcalSubscriptions(): array
+  {
+    return json_decode(self::loadSetting(self::KEY_MODULE_ICAL_SUBSCRIPTIONS, '[]'), true);
+  }
+
+  // Configuration changes and event replacement share the same database lock.
+  public static function updateModuleIcalSubscriptions(callable $update): void
+  {
+    Setting::firstOrCreate(['key' => self::KEY_MODULE_ICAL_SUBSCRIPTIONS], ['value' => '[]']);
+    DB::transaction(function () use ($update) {
+      $setting = Setting::where('key', self::KEY_MODULE_ICAL_SUBSCRIPTIONS)->lockForUpdate()->firstOrFail();
+      $setting->value = json_encode($update(json_decode($setting->value, true)), JSON_THROW_ON_ERROR);
+      $setting->save();
+    });
+  }
 
   const KEY_LASTUPDATED = 'settings_last_updated';
 
@@ -84,67 +103,6 @@ class SettingService
   public static function setModuleTrashLastFetched(Carbon $date)
   {
     self::saveSetting(self::KEY_MODULE_TRASH_FETCHED, $date);
-  }
-
-  // ##########################################################################
-
-  const KEY_MODULE_SHAREPOINT_USER = "module_sharepoint_user";
-  public static function getModuleSharepointUser(): string
-  {
-    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_USER, '');
-  }
-  public static function setModuleSharepointUser(string $username)
-  {
-    self::saveSetting(self::KEY_MODULE_SHAREPOINT_USER, $username);
-  }
-
-  // ##########################################################################
-
-  const KEY_MODULE_SHAREPOINT_PASS = "module_sharepoint_pass";
-  public static function getModuleSharepointPass(): string
-  {
-    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_PASS, '');
-  }
-  public static function setModuleSharepointPass(string $password)
-  {
-    self::saveSetting(self::KEY_MODULE_SHAREPOINT_PASS, $password);
-  }
-
-  // ##########################################################################
-
-  const KEY_MODULE_SHAREPOINT_SECRET = "module_sharepoint_secret";
-  public static function getModuleSharepointSecret(): string
-  {
-    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_SECRET, '');
-  }
-  public static function setModuleSharepointSecret(string $secret)
-  {
-    self::saveSetting(self::KEY_MODULE_SHAREPOINT_SECRET, $secret);
-  }
-
-  // ##########################################################################
-
-  const KEY_MODULE_SHAREPOINT_LINK = "module_sharepoint_link";
-  public static function getModuleSharepointLink(): string
-  {
-    return self::loadSetting(self::KEY_MODULE_SHAREPOINT_LINK, '');
-  }
-  public static function setModuleSharepointLink(string $link)
-  {
-    self::saveSetting(self::KEY_MODULE_SHAREPOINT_LINK, $link);
-  }
-
-  // ##########################################################################
-
-  const KEY_MODULE_SHAREPOINT_FETCHED = "module_sharepoint_fetched";
-  public static function getModuleSharepointLastFetched(): Carbon|null
-  {
-    $date = self::loadSetting(self::KEY_MODULE_SHAREPOINT_FETCHED, null);
-    return empty($date) ? null : Carbon::parse($date)->setTimezone(config('app.timezone'));
-  }
-  public static function setModuleSharepointLastFetched(Carbon $date)
-  {
-    self::saveSetting(self::KEY_MODULE_SHAREPOINT_FETCHED, $date);
   }
 
   // ##########################################################################

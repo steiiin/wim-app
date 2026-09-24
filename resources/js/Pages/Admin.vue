@@ -19,7 +19,7 @@
   // Local components
   import StationSettingsDialog from '@/Dialogs/StationSettingsDialog.vue'
   import ModuleTrashDialog from '@/Dialogs/ModuleTrashDialog.vue'
-  import ModuleSharepointDialog from '@/Dialogs/ModuleSharepointDialog.vue'
+  import ModuleIcalSubscriptionDialog from '@/Dialogs/ModuleIcalSubscriptionDialog.vue'
 
   import EditInfoDialog from '@/Dialogs/EditInfoDialog.vue'
   import EditEventDialog from '@/Dialogs/EditEventDialog.vue'
@@ -62,15 +62,17 @@
       type: Array,
       required: true,
     },
+    moduleIcalSubscription: {
+      type: Object,
+      required: true,
+    },
     moduleTrash: {
       type: Object,
       required: true,
     },
-    moduleSharepoint: {
-      type: Object,
-      required: true,
-    }
   })
+
+  const moduleIcalSubscriptionDialog = ref(null)
 
   const infoData = computed(() => props.infos.map(e => ({ ...e,
     from: e.from ? new Date(e.from) : null,
@@ -197,16 +199,6 @@
   const moduleTrashDialog = ref(null)
   const changeModuleTrash = async () => {
     await moduleTrashDialog.value.open({
-    })
-  }
-
-// #endregion
-// #region Module: Sharepoint
-
-const moduleSharepointDialog = ref(null)
-  const changeModuleSharepoint = async () => {
-    await moduleSharepointDialog.value.open({
-      ...props.moduleSharepoint
     })
   }
 
@@ -571,6 +563,31 @@ const deleteDialog = ref(null)
         <v-card-text>
           <v-expansion-panels color="black">
             <v-expansion-panel>
+              <v-expansion-panel-title>Wachenkalender</v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-card>
+                  <v-card-title class="mb-n4">Wachenkalender</v-card-title>
+                  <v-card-subtitle>Einstellungen</v-card-subtitle>
+                  <v-card-text>
+                    <p v-if="!moduleIcalSubscription.calendars.length">Noch keine Kalender eingerichtet.</p>
+                    <div v-for="calendar in moduleIcalSubscription.calendars" :key="calendar.id" class="mb-4">
+                      <div class="mb-2"><v-icon :icon="calendar.icon" class="mr-2" />{{ calendar.name }}</div>
+                      <ul class="admin-info">
+                        <li><pre>Abruf (Zuletzt):     </pre>{{ calendar.last_attempt ?? 'Noch nie!' }}</li>
+                        <li><pre>Abruf (Erfolgreich): </pre>{{ calendar.last_success ?? 'Noch nie!' }}</li>
+                      </ul>
+                      <v-alert v-if="calendar.last_error" type="error" density="compact" class="mt-2">{{ calendar.last_error }}</v-alert>
+                    </div>
+                  </v-card-text>
+                  <v-divider />
+                  <v-card-actions>
+                    <v-spacer />
+                    <v-btn @click="moduleIcalSubscriptionDialog.open(moduleIcalSubscription)">Ändern</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+            <v-expansion-panel>
               <v-expansion-panel-title>Abfallkalender</v-expansion-panel-title>
               <v-expansion-panel-text>
                 <v-card>
@@ -592,29 +609,6 @@ const deleteDialog = ref(null)
                 </v-card>
               </v-expansion-panel-text>
             </v-expansion-panel>
-            <v-expansion-panel>
-              <v-expansion-panel-title>Sharepoint</v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <v-card>
-                  <v-card-title class="mb-n4">Sharepoint</v-card-title>
-                  <v-card-subtitle>Einstellungen</v-card-subtitle>
-                  <v-card-text>
-                    <ul class="admin-info">
-                      <li><pre>Link:                </pre>{{ !moduleSharepoint.sharepoint_link ? '--' : moduleSharepoint.sharepoint_link }}</li>
-                      <li><pre>Nutzer:              </pre>{{ !moduleSharepoint.username ? '--' : moduleSharepoint.username }}</li>
-                      <li><pre>Abruf (Zuletzt):     </pre>{{ moduleSharepoint.last_fetched ?? 'Noch nie!' }}</li>
-                      <li><pre>Abruf (Erfolgreich): </pre>{{ moduleSharepoint.last_updated ?? 'Noch nie!' }}</li>
-                      <li><pre>Aktuell bis:         </pre>{{ moduleSharepoint.uptodate ?? 'Noch nie!' }}</li>
-                    </ul>
-                  </v-card-text>
-                  <v-divider></v-divider>
-                  <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn @click="changeModuleSharepoint" text="Ändern"></v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
           </v-expansion-panels>
         </v-card-text>
       </v-card>
@@ -623,7 +617,7 @@ const deleteDialog = ref(null)
 
     <StationSettingsDialog ref="stationSettingsDialog" />
     <ModuleTrashDialog ref="moduleTrashDialog" />
-    <ModuleSharepointDialog ref="moduleSharepointDialog" />
+    <ModuleIcalSubscriptionDialog ref="moduleIcalSubscriptionDialog" />
 
     <EditInfoDialog ref="editInfoDialog" />
     <EditEventDialog ref="editEventDialog" />

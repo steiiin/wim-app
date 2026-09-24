@@ -31,7 +31,12 @@ class Task extends Model
 
   public function toMonitorArray()
   {
-    return array_merge($this->payload, [
+    $payload = $this->payload;
+    if ($this->autotag === 'trash') {
+      $payload['icon'] = 'mdi-trash-can';
+    }
+
+    return array_merge($payload, [
       'type' => 'task',
       'time_start' => $this->dueto->startOfDay(),
       'time_end' => $this->dueto,

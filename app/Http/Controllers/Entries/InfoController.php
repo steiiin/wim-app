@@ -8,6 +8,7 @@ use App\Rules\ValidPayload;
 use App\Services\PayloadService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class InfoController extends Controller
 {
@@ -28,6 +29,14 @@ class InfoController extends Controller
             'from'         => 'exclude_if:is_permanent,true|required_if:is_permanent,false|date',
             'until'        => 'exclude_if:is_permanent,true|required_if:is_permanent,false|date',
             'is_allday'    => 'required|accepted',
+        ]);
+
+        // Validate the nested icon separately so Laravel retains the full payload array.
+        $request->validate([
+            'payload.icon' => ['nullable', 'string', Rule::in([
+                'mdi-information', 'mdi-alert', 'mdi-wrench',
+                'mdi-broom', 'mdi-boom-gate', 'mdi-lightning-bolt',
+            ])],
         ]);
 
         PayloadService::normalize($validated['payload']);

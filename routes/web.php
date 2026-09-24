@@ -6,8 +6,8 @@ use App\Http\Controllers\Entries\EventController;
 use App\Http\Controllers\Entries\InfoController;
 use App\Http\Controllers\Entries\RecurringController;
 use App\Http\Controllers\Entries\TaskController;
-use App\Http\Controllers\Modules\SharepointController;
 use App\Http\Controllers\Modules\TrashController;
+use App\Http\Controllers\Modules\IcalSubscriptionController;
 use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Middleware\IsAuthenticated;
@@ -34,8 +34,8 @@ Route::middleware(IsAuthenticated::class)->group(function() {
     });
 
     Route::post('/set-settings', [SettingsController::class, 'store']);
+    Route::post('/set-module-ical', [IcalSubscriptionController::class, 'store']);
     Route::post('/set-module-trash', [TrashController::class, 'store']);
-    Route::post('/set-module-sharepoint', [SharepointController::class, 'store']);
 
     Route::resource('/set-info', InfoController::class)->only(['store', 'destroy']);
     Route::resource('/set-event', EventController::class)->only(['store', 'destroy']);

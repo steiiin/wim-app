@@ -20,6 +20,7 @@
   // Local components
   import { DateHelper } from '@/Utils/DateHelper';
   import { CloneHelper } from '@/Utils/CloneHelper'
+  import { infoIcons } from '@/Utils/PayloadIcons'
 
 // #endregion
 
@@ -35,6 +36,7 @@
 
       editForm.id = props.id
       editForm.payload = CloneHelper.payload(props.payload)
+      editForm.payload.icon ??= 'mdi-information'
       editForm.is_permanent = props.is_permanent
       editForm.from = props.from ? CloneHelper.date(props.from) : null
       editForm.until = props.until ? CloneHelper.date(props.until) : null
@@ -44,7 +46,7 @@
     {
 
       editForm.id = null
-      editForm.payload = { title: '' }
+      editForm.payload = { title: '', icon: 'mdi-information' }
       editForm.is_permanent = true
       editForm.from = null
       editForm.until = null
@@ -141,6 +143,13 @@
             <v-expansion-panel title="Inhalt" color="black" :rounded="0" value="payload">
               <v-expansion-panel-text>
                 <PayloadEdit v-model="editForm.payload" class="pa-2" />
+                <v-select v-model="editForm.payload.icon" label="Symbol" :items="infoIcons"
+                  :prepend-inner-icon="editForm.payload.icon" :error-messages="editForm.errors['payload.icon']"
+                  class="pa-2">
+                  <template #item="{ props, item }">
+                    <v-list-item v-bind="props" :prepend-icon="item.value" />
+                  </template>
+                </v-select>
               </v-expansion-panel-text>
             </v-expansion-panel>
             <v-expansion-panel color="black" :rounded="0" value="timing" :disabled="!isPayloadValid">
