@@ -32,16 +32,28 @@ const timing = computed(() => {
     }).format(date)
   }
   const sameDay = !end.value || DateHelper.isSameDay(start.value, end.value)
-  const dates = sameDay ? dateLabel(start.value) : `${dateLabel(start.value)} – ${dateLabel(end.value)}`
-  if (props.item.is_allday) return { dates, times: '' }
-  if (!sameDay) return {
-    dates: `${dateLabel(start.value)} ${DateHelper.formatTime(start.value)} –`,
-    times: `${dateLabel(end.value)} ${DateHelper.formatTime(end.value)}`,
+  if (sameDay) {
+    const omitDate = DateHelper.isSameDay(start.value, props.now) || DateHelper.isSameDay(start.value, tomorrow)
+    const date = omitDate ? '' : dateLabel(start.value)
+    if (props.item.is_allday) return date
+    const times = `${DateHelper.formatTime(start.value)}${end.value ? ` – ${DateHelper.formatTime(end.value)}` : ''}`
+    return date ? `${date} ${times}` : times
   }
-  return {
-    dates,
-    times: `${DateHelper.formatTime(start.value)}${end.value ? ` – ${DateHelper.formatTime(end.value)}` : ''}`,
+
+  const todayBegin = new Date(props.now)
+  todayBegin.setHours(0, 0, 0, 0)
+  if (start.value < todayBegin) {
+    const date = dateLabel(end.value).toLowerCase()
+    const until = props.item.is_allday
+      ? date
+      : `${DateHelper.isSameDay(end.value, props.now) ? '' : `${date} `}${DateHelper.formatTime(end.value)}`
+    return `Läuft bis ${until}`
   }
+
+  const endpoint = (date) => props.item.is_allday
+    ? dateLabel(date)
+    : `${dateLabel(date)} ${DateHelper.formatTime(date)}`
+  return `${endpoint(start.value)} ${prominent.value ? 'BIS' : '–'} ${endpoint(end.value)}`
 })
 </script>
 
@@ -55,9 +67,9 @@ const timing = computed(() => {
       <h2>{{ item.title || 'Ohne Titel' }}</h2>
       <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
       <div v-if="item.description" class="event-description">{{ item.description }}</div>
-      <div class="event-timing">
+      <div v-if="timing" class="event-timing">
         <v-icon icon="mdi-clock-outline" />
-        <span>{{ timing.dates }} {{ timing.times }}</span>
+        <span>{{ timing }}</span>
       </div>
     </div>
   </article>

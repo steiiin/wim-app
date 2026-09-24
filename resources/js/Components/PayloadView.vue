@@ -86,7 +86,7 @@ const timingText = computed(() => {
   {
     hasBegun.value = true
     hasToFade.value = false
-    return `Bis ${DateHelper.formatTime(end)}`
+    return `bis ${DateHelper.formatTime(end)}`
   }
   else
   {
@@ -210,7 +210,6 @@ article {
       align-items: center;
       font-size: 0.72rem;
       font-weight: 500;
-      text-transform: uppercase;
 
       line-height: 1rem;
       gap: .2rem;
