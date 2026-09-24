@@ -89,7 +89,7 @@ const timing = computed(() => {
   font-size: var(--event-size);
   &--prominent { --event-size: 0.9rem; --event-padding: 0.85rem; }
   &:not(.event-view--prominent) {
-    opacity: 0.7;
+    opacity: 0.6;
   }
 }
 .event-identity {
