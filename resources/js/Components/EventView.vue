@@ -64,8 +64,10 @@ const timing = computed(() => {
       <span v-if="item.vehicle" class="event-vehicle">{{ item.vehicle }}</span>
     </div>
     <div class="event-body">
-      <h2>{{ item.title || 'Ohne Titel' }}</h2>
-      <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
+      <div class="event-heading">
+        <h2>{{ item.title || 'Ohne Titel' }}</h2>
+        <div v-if="item.meta" class="event-meta">{{ item.meta }}</div>
+      </div>
       <div v-if="item.description" class="event-description">{{ item.description }}</div>
       <div v-if="timing" class="event-timing">
         <v-icon icon="mdi-clock-outline" />
@@ -116,6 +118,15 @@ const timing = computed(() => {
   overflow-wrap: anywhere;
   h2 { font-size: min(1em, var(--monitor-heading-size, 0.9rem)); line-height: 1.15; font-weight: 500; margin: 0; }
 }
+.event-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.225em 1em;
+  // Clip the separator when metadata wraps to the start of a new line.
+  overflow: hidden;
+  > * { min-width: 0; max-width: 100%; }
+}
 .event-timing {
   display: flex;
   align-items: center;
@@ -126,11 +137,20 @@ const timing = computed(() => {
   .v-icon { font-size: 1em; }
 }
 .event-meta {
-  margin-top: 0.3em;
+  position: relative;
   font-family: 'Inter';
   font-size: 0.75em;
   font-weight: 600;
   text-transform: uppercase;
+  &::before {
+    content: '•' / '';
+    position: absolute;
+    inset-inline-start: -1.333333em;
+    width: 1.333333em;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+  }
 }
 .event-description { margin-top: 0.25em; font-size: 0.85em; }
 </style>
