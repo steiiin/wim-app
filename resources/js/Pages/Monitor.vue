@@ -263,31 +263,39 @@ html, body, #app {
 .event-group-banner {
   position: relative;
   margin: 0;
-  background-color: #000;
-  color: #fff;
+  background-color: var(--monitor-base-color);
+  color: var(--monitor-contrast-color);
   font-size: 0.8rem;
   font-weight: 500;
   line-height: 1.2;
 
   &--imminent,
   &--upcoming {
-    background-image: repeating-linear-gradient(
-      135deg,
-      transparent 0,
-      transparent calc(var(--hatch-spacing) - 1px),
-      rgba(255, 255, 255, 0.35) calc(var(--hatch-spacing) - 1px),
-      rgba(255, 255, 255, 0.35) var(--hatch-spacing)
-    );
+    &::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-color: var(--monitor-contrast-color-tr35);
+      // Matching edge strokes make the antialiased SVG tile seamless.
+      mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M-5 5 5-5M-5 15 15-5M5 15 15 5' fill='none' stroke='white' stroke-width='1' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+      // Snap the diagonal tile period to whole pixels at the monitor's zoom.
+      // Fractional tile boundaries can leave gaps between repeated SVG strokes.
+      --hatch-tile-size: calc(round(nearest, var(--hatch-spacing) * 1.41421356237 * var(--monitor-zoom), 1px) / var(--monitor-zoom));
+      mask-size: var(--hatch-tile-size) var(--hatch-tile-size);
+      mask-repeat: repeat;
+    }
   }
   &--imminent { --hatch-spacing: 0.5rem; }
   &--upcoming { --hatch-spacing: 0.25rem; }
 
   span {
     position: absolute;
+    z-index: 1;
     top: var(--event-label-top, 50%);
     left: 50%;
     padding: 0.15rem 0.3rem;
-    background: #000;
+    background: var(--monitor-base-color);
     white-space: nowrap;
     transform: translate(-50%, -50%) rotate(-90deg);
   }
