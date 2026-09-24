@@ -28,7 +28,7 @@ class FetchIcalSubscriptions extends Command
     try {
       foreach ($calendars as $index => $calendar) {
         if ($index > 0) {
-          Sleep::for(60)->seconds();
+          Sleep::for(15)->seconds();
         }
         try {
           $updated = $service->fetchCalendar($calendar);
